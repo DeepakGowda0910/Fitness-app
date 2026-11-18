@@ -18,13 +18,13 @@ describe('supabase/setup.sql', () => {
     expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
   });
 
-  it('turns on row-level security for every table in public, and gives signed-out visitors nothing', async () => {
+  it('turns on row-level security for every table (including Drizzle's bookkeeping), and gives signed-out visitors nothing', async () => {
     const client = new PGlite();
     await client.exec(SUPABASE_TEST_SHIM_SQL);
     await client.exec(setupSql);
     const open = await client.query<{ relname: string }>(
       `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
-       where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity`,
+       where n.nspname in ('public', 'drizzle') and c.relkind = 'r' and not c.relrowsecurity`,
     );
     expect(open.rows).toEqual([]);
     const anon = await client.query<{ n: number }>(

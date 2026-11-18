@@ -7,6 +7,8 @@ BEGIN;
 
 CREATE SCHEMA IF NOT EXISTS drizzle;
 CREATE TABLE IF NOT EXISTS drizzle.__drizzle_migrations (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint);
+-- Bookkeeping for schema changes. Only the database owner, who bypasses row-level security, uses it.
+ALTER TABLE drizzle.__drizzle_migrations ENABLE ROW LEVEL SECURITY;
 
 -- ===== 0000_init =====
 CREATE TYPE "public"."assessment_status" AS ENUM('draft', 'completed');
