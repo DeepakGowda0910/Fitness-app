@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   deleteUser,
@@ -15,9 +14,8 @@ import {
   type AdminUser,
   type UserStatus,
 } from '@/lib/admin';
-import { cloudEnabled, useAppData } from '@/lib/app-data';
 import { supabase } from '@/lib/supabase';
-import { Notice } from './fields';
+import { Notice } from './ui';
 
 const dateFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 const timeFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -31,20 +29,9 @@ const day = (iso: string | null) => {
 
 type Pending = { kind: 'suspend' | 'reactivate' | 'delete'; user: AdminUser };
 
-export function AdminView() {
-  const { ready, mode, adminRole } = useAppData();
-
-  if (!cloudEnabled) return <Gate title="Admin isn't available here">This copy of the app isn't connected to an account database.</Gate>;
-  if (!ready) return <div className="h-72 animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
-  if (mode !== 'cloud') {
-    return (
-      <Gate title="Sign in to continue">
-        The admin area is for the app's admins. <Link href="/signin" className="font-medium text-brand hover:underline">Sign in</Link> first.
-      </Gate>
-    );
-  }
-  if (!adminRole) return <Gate title="No access">Your account isn't an admin. If it should be, ask the app owner.</Gate>;
-  return <Dashboard role={adminRole} />;
+/** The dashboard. Shown only after the database has confirmed the role; it checks again on every call. */
+export function AdminView({ role }: { role: AdminRole }) {
+  return <Dashboard role={role} />;
 }
 
 function Dashboard({ role }: { role: AdminRole }) {
@@ -377,14 +364,5 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dt className="text-muted">{label}</dt>
       <dd className="font-medium">{value}</dd>
     </div>
-  );
-}
-
-function Gate({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mx-auto max-w-md rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <p className="mt-2 text-muted">{children}</p>
-    </section>
   );
 }

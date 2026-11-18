@@ -1,13 +1,33 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cloudEnabled, useAppData } from '@/lib/app-data';
 import { signInRedirectUrl, supabase } from '@/lib/supabase';
 import { Notice } from './fields';
 
+/**
+ * Why a sign-in link that brought the user here didn't work, read from the
+ * address before the Supabase client tidies it up. A leftover one-time code
+ * almost always means the link was opened in a different browser or app
+ * from the one that asked for it.
+ */
+function linkErrorFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const described = params.get('error_description') ?? hash.get('error_description');
+  if (described) return `That sign-in link didn't work: ${described.replaceAll('+', ' ')}. Ask for a new one below.`;
+  if (params.has('code')) {
+    return "That sign-in link was opened in a different browser from the one that asked for it, so it couldn't sign you in. Ask for a new link below, then open the email in this same browser.";
+  }
+  return null;
+}
+
 export function SignInView() {
-  const { ready, mode, email, adminRole, signOut } = useAppData();
+  const { ready, mode, email, signOut } = useAppData();
+  // Read once, as the page opens (this runs before the app connects to Supabase).
+  const [linkError, setLinkError] = useState<string | null>(null);
+  useEffect(() => setLinkError(linkErrorFromUrl()), []);
   const saving = mode === 'cloud' ? 'are saved to your account, so they\'re on every device you sign in on.' : 'are kept in this browser until your account loads. Reload the page to try again.';
 
   if (!cloudEnabled) {
@@ -29,11 +49,6 @@ export function SignInView() {
           <Link href="/results" className="inline-flex h-12 items-center justify-center rounded-xl bg-brand px-6 font-semibold text-on-brand hover:bg-brand-strong">
             My targets
           </Link>
-          {adminRole ? (
-            <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-surface px-6 font-medium hover:bg-surface-2">
-              Admin
-            </Link>
-          ) : null}
           <button type="button" onClick={() => void signOut()} className="h-12 rounded-xl border border-border bg-surface px-6 font-medium hover:bg-surface-2">
             Sign out
           </button>
@@ -42,10 +57,10 @@ export function SignInView() {
     );
   }
 
-  return <EmailForm />;
+  return <EmailForm linkError={linkError} />;
 }
 
-function EmailForm() {
+function EmailForm({ linkError }: { linkError: string | null }) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [error, setError] = useState('');
@@ -69,6 +84,11 @@ function EmailForm() {
       <p className="text-muted">
         Save your answers, weigh-ins and check-ins to your account, and use them on your phone and laptop. No password: we email you a link.
       </p>
+      {linkError ? (
+        <div className="mt-4">
+          <Notice tone="warn">{linkError}</Notice>
+        </div>
+      ) : null}
       <form
         className="mt-6 space-y-4"
         onSubmit={async (e) => {
@@ -114,6 +134,9 @@ function EmailForm() {
       </form>
       <p className="mt-4 text-xs text-muted">
         Anything you've already entered on this device moves into your account the first time you sign in.
+      </p>
+      <p className="mt-2 text-xs text-muted">
+        Signed in on your phone already? Each browser signs in on its own, so sign in here too to see the same data on this device.
       </p>
     </Card>
   );

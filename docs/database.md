@@ -30,8 +30,8 @@ reject UPDATE through a trigger (`0001_append_only.sql`).
 
 ## Admin area
 
-`migrations/0006_admin_access.sql` adds the admin powers behind `/admin` in
-the web app. The site is static and only has the public key, so there is no
+`migrations/0006_admin_access.sql` adds the admin powers behind the separate
+admin site (`apps/admin`, `docs/admin.md`). The site is static and only has the public key, so there is no
 secret key anywhere in the browser: each admin action is a `SECURITY DEFINER`
 function that first checks the caller is an active admin (`admin_roles`), then
 writes `audit_logs`, then acts.

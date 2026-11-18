@@ -5,7 +5,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toTargetsInput, validateStep, type AssessmentDraft } from './assessment';
 import { emptySnapshot, type Backend, type Snapshot } from './backend';
 import { baseKeyOf, newCheckin, withWeighIn, type StoredWeighIn, type WeekAnswers } from './checkins';
-import { myAdminRole, type AdminRole } from './admin';
 import { cloudBackend } from './cloud-backend';
 import { localBackend } from './local-backend';
 import { connectOnce } from './session-sync';
@@ -17,8 +16,6 @@ export interface AppData {
   mode: 'local' | 'cloud';
   /** Signed-in email, in cloud mode. */
   email: string | null;
-  /** The signed-in user's admin role, if any. The database checks it again on every admin action. */
-  adminRole: AdminRole | null;
   draft: AssessmentDraft;
   tracking: Snapshot['tracking'];
   /** Last save problem, shown to the user; cleared on the next successful save. */
@@ -50,7 +47,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<'local' | 'cloud'>('local');
   const [email, setEmail] = useState<string | null>(null);
-  const [adminRole, setAdminRole] = useState<AdminRole | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const backend = useRef<Backend>(localBackend());
   const lastKey = useRef<string | null>(null);
@@ -95,8 +91,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         }
         if (!cancelled) await use(cloud, 'cloud', userEmail);
         setSyncError(null);
-        const role = await myAdminRole(db!);
-        if (!cancelled) setAdminRole(role);
       } catch (err) {
         if (!cancelled) {
           setSyncError(
@@ -125,7 +119,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         connect(session.user.id, session.user.email ?? '');
       } else if (event === 'SIGNED_OUT') {
         sync.reset();
-        setAdminRole(null);
         void use(localBackend(), 'local', null);
       }
     });
@@ -192,7 +185,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       ready,
       mode,
       email,
-      adminRole,
       draft: snapshot.draft,
       tracking: snapshot.tracking,
       syncError,
@@ -202,7 +194,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       submitCheckin,
       signOut,
     }),
-    [ready, mode, email, adminRole, snapshot, syncError, saveDraft, addWeighIn, removeWeighIn, submitCheckin, signOut],
+    [ready, mode, email, snapshot, syncError, saveDraft, addWeighIn, removeWeighIn, submitCheckin, signOut],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
