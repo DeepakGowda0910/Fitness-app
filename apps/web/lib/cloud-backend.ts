@@ -55,11 +55,17 @@ export async function cloudBackend(db: SupabaseClient, authUserId: string, email
     if (existing.status !== 'active') throw new Error(SUSPENDED_MESSAGE);
     userId = existing.id;
   } else {
-    const created = check(
-      await db.from('users').insert({ auth_provider_id: authUserId, email }).select('id').single(),
-      'create your account',
-    );
-    userId = (created as { id: string }).id;
+    const inserted = await db.from('users').insert({ auth_provider_id: authUserId, email }).select('id').single();
+    if (inserted.error?.code === '23505') {
+      // Another tab or request created the row first: use it.
+      const row = check(
+        await db.from('users').select('id').eq('auth_provider_id', authUserId).single(),
+        'load your account',
+      ) as { id: string };
+      userId = row.id;
+    } else {
+      userId = (check(inserted, 'create your account') as { id: string }).id;
+    }
   }
 
   let assessmentId: string | null = null;

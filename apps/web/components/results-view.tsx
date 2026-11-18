@@ -205,6 +205,8 @@ function SavedWhere() {
     <p className="text-xs text-muted">
       {mode === 'cloud' && email ? (
         <>Saved to your account ({email}).</>
+      ) : email ? (
+        <>Signed in as {email}, but your account hasn't loaded, so changes are kept in this browser for now.</>
       ) : cloudEnabled ? (
         <>
           Saved in this browser only.{' '}

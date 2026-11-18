@@ -28,6 +28,7 @@ export function SignInView() {
   // Read once, as the page opens (this runs before the app connects to Supabase).
   const [linkError, setLinkError] = useState<string | null>(null);
   useEffect(() => setLinkError(linkErrorFromUrl()), []);
+  const saving = mode === 'cloud' ? 'are saved to your account, so they\'re on every device you sign in on.' : 'are kept in this browser until your account loads. Reload the page to try again.';
 
   if (!cloudEnabled) {
     return (
@@ -38,12 +39,11 @@ export function SignInView() {
   }
   if (!ready) return <div className="mx-auto h-72 max-w-md animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
 
-  if (mode === 'cloud' && email) {
+  if (email) {
     return (
       <Card title="You're signed in">
         <p className="text-muted">
-          Signed in as <span className="font-medium text-text">{email}</span>. Your answers, weigh-ins and check-ins are saved to your
-          account, so they're on every device you sign in on.
+          Signed in as <span className="font-medium text-text">{email}</span>. Your answers, weigh-ins and check-ins {saving}
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link href="/results" className="inline-flex h-12 items-center justify-center rounded-xl bg-brand px-6 font-semibold text-on-brand hover:bg-brand-strong">
