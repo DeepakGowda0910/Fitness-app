@@ -10,7 +10,7 @@ pnpm + Turborepo monorepo.
 | Path | What |
 | --- | --- |
 | `packages/calc-engine` | Deterministic BMR/TDEE/macro engine, safety screening, goal feasibility. See [docs/calc-engine.md](docs/calc-engine.md). |
-| `packages/db` | PostgreSQL schema and migrations (Drizzle) for Phase 1. Tests run on an in-memory Postgres, no account needed. |
+| `packages/db` | PostgreSQL schema and migrations (Drizzle) for Phase 1. Row-level security for Supabase. See [docs/database.md](docs/database.md). Tests run on an in-memory Postgres, no account needed. |
 | `apps/web` | Next.js PWA (coming next) |
 | `apps/api` | NestJS API (coming next) |
 

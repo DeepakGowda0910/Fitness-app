@@ -15,6 +15,13 @@
       "when": 1794990189765,
       "tag": "0001_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794990379337,
+      "tag": "0002_row_level_security",
+      "breakpoints": true
     }
   ]
 }
