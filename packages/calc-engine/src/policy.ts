@@ -11,7 +11,7 @@
 
 import type { Goal } from './types.js';
 
-export const POLICY_VERSION = '2026.11.3';
+export const POLICY_VERSION = '2026.11.4';
 
 export interface GoalPolicy {
   /** Protein in g per kg of reference weight: the default used, and the guidance range. */
@@ -26,7 +26,8 @@ export const policy = {
     kcalPerKgBodyWeight: 7700,
     /** TDEE estimates carry this relative uncertainty band (±). */
     tdeeUncertaintyPct: 0.1,
-    activityFactor: { min: 1.2, max: 1.9 },
+    /** 2.2 is the sustained level of athletes in heavy training; only extreme answers reach it. */
+    activityFactor: { min: 1.2, max: 2.2 },
     /** Non-exercise activity factor by occupation, used when no step count is known. */
     occupationFactor: {
       sedentary: 1.2,
@@ -35,17 +36,12 @@ export const policy = {
       heavy: 1.55,
     },
     /**
-     * Non-exercise activity factor by average daily steps (upper bound exclusive).
-     * Each extra 1,000 steps burns roughly 0.5 kcal per kg, about 0.02–0.03 of a
-     * typical BMR, so the bands rise by less than 0.1 each.
+     * Non-exercise activity from average daily steps, on a smooth scale with no
+     * ceiling of its own: 1.2 covers the ~3,000 steps of a desk day, and each
+     * further 1,000 steps adds 0.03 (walking burns roughly 0.5 kcal per kg per
+     * 1,000 steps, plus the general movement that goes with it).
      */
-    stepsFactor: [
-      { below: 5000, factor: 1.2 },
-      { below: 7500, factor: 1.3 },
-      { below: 10000, factor: 1.375 },
-      { below: 12500, factor: 1.45 },
-      { below: Infinity, factor: 1.5 },
-    ],
+    steps: { sedentaryFactor: 1.2, includedSteps: 3000, perThousand: 0.03 },
     /**
      * Added to the activity factor per training day, scaled by session length / 60 min.
      * An hour of gym training burns roughly 250–350 kcal above rest; spread over
