@@ -1,7 +1,8 @@
 name: Publish web app
 
-# Builds the web app as plain files and publishes it to GitHub Pages
-# (https://<owner>.github.io/<repo>/) on every change to main.
+# Publishes to GitHub Pages (https://<owner>.github.io/<repo>/) on every change to main.
+# The main link is Cloudflare Pages (see docs/hosting.md); this keeps the old link working,
+# either as a full copy of the app or, once NEW_SITE_URL is set, as forwarding pages.
 on:
   push:
     branches: [main]
@@ -27,28 +28,23 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build the app
-        run: pnpm turbo build --filter=@fitness/web
+      # Normal mode: the full app at https://<owner>.github.io/<repo>/.
+      - name: Build the app and admin site
+        if: ${{ vars.NEW_SITE_URL == '' }}
+        run: bash scripts/build-site.sh
         env:
-          NEXT_OUTPUT: export
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+          SITE_BASE_PATH: /${{ github.event.repository.name }}
           # Public values (repository variables, not secrets): data is protected by row-level security.
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
-          NEXT_TELEMETRY_DISABLED: '1'
-      - name: Build the admin site
-        run: pnpm turbo build --filter=@fitness/admin
+      # Moved mode: once the repository variable NEW_SITE_URL is set (for example
+      # https://hyperactive.pages.dev), every old link forwards to the same page there.
+      - name: Build forwarding pages to the new link
+        if: ${{ vars.NEW_SITE_URL != '' }}
+        run: node scripts/build-redirect.mjs apps/web/out
         env:
-          NEXT_OUTPUT: export
-          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}/admin
-          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
-          NEXT_TELEMETRY_DISABLED: '1'
-      # The admin site is a separate app with its own sign-in, published at <site>/admin/.
-      - name: Put the admin site next to the app
-        run: |
-          test ! -e apps/web/out/admin
-          cp -r apps/admin/out apps/web/out/admin
+          NEW_SITE_URL: ${{ vars.NEW_SITE_URL }}
+          OLD_BASE_PATH: /${{ github.event.repository.name }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/out
