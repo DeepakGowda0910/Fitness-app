@@ -25,6 +25,9 @@ export interface AppData {
   removeWeighIn: (date: string) => void;
   submitCheckin: (answers: WeekAnswers, today: string, cycleAware: boolean) => void;
   signOut: () => Promise<void>;
+  /** True after the user opened a "reset your password" email, until they choose a new password. */
+  recoveringPassword: boolean;
+  doneRecoveringPassword: () => void;
 }
 
 const Ctx = createContext<AppData | null>(null);
@@ -48,6 +51,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<'local' | 'cloud'>('local');
   const [email, setEmail] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [recoveringPassword, setRecoveringPassword] = useState(false);
   const backend = useRef<Backend>(localBackend());
   const lastKey = useRef<string | null>(null);
   const draftTimer = useRef<number | undefined>(undefined);
@@ -115,9 +119,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     })();
 
     const sub = db?.auth.onAuthStateChange((event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+      // A password-reset link signs the user in and asks for a new password.
+      if (event === 'PASSWORD_RECOVERY') setRecoveringPassword(true);
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'PASSWORD_RECOVERY') && session?.user) {
         connect(session.user.id, session.user.email ?? '');
       } else if (event === 'SIGNED_OUT') {
+        setRecoveringPassword(false);
         sync.reset();
         void use(localBackend(), 'local', null);
       }
@@ -180,6 +187,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await supabase()?.auth.signOut();
   }, []);
 
+  const doneRecoveringPassword = useCallback(() => setRecoveringPassword(false), []);
+
   const value = useMemo<AppData>(
     () => ({
       ready,
@@ -193,8 +202,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       removeWeighIn,
       submitCheckin,
       signOut,
+      recoveringPassword,
+      doneRecoveringPassword,
     }),
-    [ready, mode, email, snapshot, syncError, saveDraft, addWeighIn, removeWeighIn, submitCheckin, signOut],
+    [ready, mode, email, snapshot, syncError, saveDraft, addWeighIn, removeWeighIn, submitCheckin, signOut, recoveringPassword, doneRecoveringPassword],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

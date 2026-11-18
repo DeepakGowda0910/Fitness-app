@@ -25,7 +25,14 @@ connected; then they will be saved through the API.
 Without a Supabase project (no `NEXT_PUBLIC_SUPABASE_*` values at build) the
 app keeps everything in this browser's local storage.
 
-With one, `/signin` emails a sign-in link (Supabase Auth, PKCE). Once signed
+With one, `/signin` offers three ways in (Supabase Auth, PKCE): email and
+password (with "Create account" and "Forgot password?"), "Continue with
+Google", and an emailed one-time sign-in link. The Google button only shows
+once the Google provider is switched on in Supabase (read from the public
+`/auth/v1/settings`). A password-reset link signs the user in and the page
+asks for a new password (`PASSWORD_RECOVERY`); signed-in users can also set or
+change a password from the same page, which is how accounts made with a link
+or Google add one. Once signed
 in, `lib/cloud-backend.ts` reads and writes the user's rows directly through
 Supabase's Data API, and row-level security limits every query to that user.
 The first sign-in moves anything already entered in the browser into the
@@ -56,7 +63,10 @@ under `/<repo>/` and publishes it to GitHub Pages on every push to `main`.
 The same workflow builds `apps/admin` and publishes it at `<site>/admin/`.
 It reads two repository *variables* (public by design): `SUPABASE_URL` and
 `SUPABASE_PUBLISHABLE_KEY`. Supabase Auth must list the Pages address as the
-Site URL and allow `<site>/signin/` as a redirect URL.
+Site URL and allow `<site>/signin/` as a redirect URL. Google sign-in also
+needs a Google OAuth client whose redirect URI is
+`https://<project-ref>.supabase.co/auth/v1/callback`, with its client ID and
+secret entered under Supabase Auth > Sign In / Providers > Google.
 
 `lib/assessment.ts` holds step validation and the mapping to the engine's
 input; it is unit-tested in `test/assessment.test.ts`.
