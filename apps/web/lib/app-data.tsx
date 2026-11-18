@@ -8,6 +8,7 @@ import { baseKeyOf, newCheckin, withWeighIn, type StoredWeighIn, type WeekAnswer
 import { myAdminRole, type AdminRole } from './admin';
 import { cloudBackend } from './cloud-backend';
 import { localBackend } from './local-backend';
+import { connectOnce } from './session-sync';
 import { cloudEnabled, supabase } from './supabase';
 
 export interface AppData {
@@ -81,7 +82,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const local = localBackend();
     const db = supabase();
 
-    const connect = async (authUserId: string, userEmail: string) => {
+    const connectUser = async (authUserId: string, userEmail: string) => {
+      // Signed in from here on, even if loading the account below fails.
+      setEmail(userEmail);
       try {
         const cloud = await cloudBackend(db!, authUserId, userEmail);
         const remote = await cloud.load();
@@ -96,24 +99,32 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setAdminRole(role);
       } catch (err) {
         if (!cancelled) {
-          setSyncError(err instanceof Error ? err.message : 'Could not reach your account.');
-          await use(local, 'local', null);
+          setSyncError(
+            `You're signed in, but your account couldn't be loaded${err instanceof Error ? ` (${err.message})` : ''}. Changes are kept in this browser until it loads; reload the page to try again.`,
+          );
+          await use(local, 'local', userEmail);
         }
+        throw err;
       }
+    };
+    const sync = connectOnce();
+    const connect = (authUserId: string, userEmail: string) => {
+      sync.connect(authUserId, () => connectUser(authUserId, userEmail)).catch(() => undefined);
     };
 
     void (async () => {
       if (!db) return use(local, 'local', null);
       const { data } = await db.auth.getSession();
       const user = data.session?.user;
-      if (user) await connect(user.id, user.email ?? '');
+      if (user) connect(user.id, user.email ?? '');
       else await use(local, 'local', null);
     })();
 
     const sub = db?.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && backend.current === local) {
-        void connect(session.user.id, session.user.email ?? '');
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        connect(session.user.id, session.user.email ?? '');
       } else if (event === 'SIGNED_OUT') {
+        sync.reset();
         setAdminRole(null);
         void use(localBackend(), 'local', null);
       }
