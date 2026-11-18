@@ -184,3 +184,17 @@ describe('7-day plan', () => {
     );
   }, 60_000);
 });
+
+describe('protein snack suggestions', () => {
+  it('only suggests foods that fit the diet', () => {
+    const plan = generateWeekPlan({
+      targets: { calories: 1550, proteinG: 130, carbsG: 161, fatG: 43, fibreG: 22 },
+      dietType: 'vegetarian',
+      mealsPerDay: 5,
+      startDate: '2026-11-23',
+    });
+    const msg = plan.warnings.find((w) => w.code === 'protein_short_days')?.message ?? '';
+    expect(msg).toContain('paneer');
+    expect(msg).not.toContain('eggs');
+  });
+});

@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import ifctData from './data/ifct2017.json' with { type: 'json' };
+import usdaData from './data/usda-sr-legacy.json' with { type: 'json' };
 
 export interface FoodNutrientsPer100g {
   /** Energy as published by the source; 0 where the source gives none. */
@@ -41,7 +42,7 @@ let cache: FoodDataset | undefined;
  * launch (see data/NOTICE.md).
  */
 export function ifct2017(): FoodDataset {
-  cache ??= JSON.parse(readFileSync(new URL('../data/ifct2017.json', import.meta.url), 'utf8')) as FoodDataset;
+  cache ??= ifctData as FoodDataset;
   return cache;
 }
 
@@ -52,7 +53,7 @@ let usdaCache: FoodDataset | undefined;
  * Central SR Legacy (public domain). Codes are "USDA:<fdcId>".
  */
 export function usdaSupplement(): FoodDataset {
-  usdaCache ??= JSON.parse(readFileSync(new URL('../data/usda-sr-legacy.json', import.meta.url), 'utf8')) as FoodDataset;
+  usdaCache ??= usdaData as FoodDataset;
   return usdaCache;
 }
 

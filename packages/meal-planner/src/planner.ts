@@ -121,11 +121,28 @@ export function generateWeekPlan(request: PlanRequest, dishes: readonly Dish[] =
   if (short > 0) {
     warnings.push({
       code: 'protein_short_days',
-      message: `${short} of 7 days fall short of your protein target with the current dishes. Adding a protein-rich snack (paneer, eggs, sprouts) will help.`,
+      message: `${short} of 7 days fall short of your protein target with the current dishes. Adding a protein-rich snack (${proteinIdeas(request.dietType, allergies)}) will help.`,
     });
   }
 
   return { engineVersion: ENGINE_VERSION, plannerVersion: PLANNER_VERSION, request, days, warnings };
+}
+
+/** Snack ideas that fit the user's diet and allergies. */
+function proteinIdeas(diet: DietType, allergies: ReadonlySet<Allergen>): string {
+  const ideas: Array<[string, boolean]> = [
+    ['paneer', diet !== 'vegan' && !allergies.has('dairy')],
+    ['curd', diet !== 'vegan' && !allergies.has('dairy')],
+    ['eggs', ['eggetarian', 'pescatarian', 'non_vegetarian'].includes(diet) && !allergies.has('egg')],
+    ['tofu', !allergies.has('soy')],
+    ['roasted chana', true],
+    ['sprouts', true],
+  ];
+  return ideas
+    .filter(([, ok]) => ok)
+    .slice(0, 3)
+    .map(([name]) => name)
+    .join(', ');
 }
 
 export class PlanError extends Error {

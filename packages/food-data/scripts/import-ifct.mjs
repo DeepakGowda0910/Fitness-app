@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Converts the IFCT 2017 composition CSV into data/ifct2017.json with the
+ * Converts the IFCT 2017 composition CSV into src/data/ifct2017.json with the
  * nutrients the app uses.
  *
  * Source CSV: the `index.csv` of the npm package @ifct2017/compositions
@@ -109,6 +109,6 @@ const foods = body.map((r) => {
   };
 });
 
-const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'data', 'ifct2017.json');
+const out = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'ifct2017.json');
 writeFileSync(out, JSON.stringify({ source: 'IFCT_2017', version: '2017', foods }, null, 1) + '\n');
 console.log(`Wrote ${foods.length} foods to ${out}`);
