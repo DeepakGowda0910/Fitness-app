@@ -5,6 +5,9 @@ import {
   generateProgram,
   nextDayIndex,
   ProgramError,
+  SPLIT_STYLES,
+  splitStylesFor,
+  type SplitStyle,
   suggestNext,
   type LoggedSet,
   type PlannedExercise,
@@ -96,7 +99,7 @@ function Workouts({ draft }: { draft: AssessmentDraft }) {
       return { error: err instanceof ProgramError ? err.message : 'Something went wrong building your plan.' };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [request.daysPerWeek, request.sessionMinutes, request.experience, request.goal, request.equipment]);
+  }, [request.daysPerWeek, request.sessionMinutes, request.experience, request.goal, request.equipment, request.split]);
 
   const sorted = useMemo(() => sortWorkouts(workouts), [workouts]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -173,6 +176,14 @@ function Workouts({ draft }: { draft: AssessmentDraft }) {
           pain, dizziness or unusual breathlessness.
         </Notice>
       ) : null}
+
+      <StylePicker
+        program={program}
+        onChange={(split) => {
+          setSelected(null);
+          saveDraft({ ...draft, split: split === program.recommendedStyle ? undefined : split });
+        }}
+      />
 
       <DayTabs program={program} selected={dayIdx} next={next} onSelect={setSelected} />
 
@@ -252,6 +263,44 @@ function DayTabs({ program, selected, next, onSelect }: { program: Program; sele
         </div>
       </div>
 
+  );
+}
+
+function StylePicker({ program, onChange }: { program: Program; onChange: (s: SplitStyle) => void }) {
+  const offered = splitStylesFor(program.daysPerWeek);
+  return (
+    <section aria-labelledby="style-heading">
+      <h2 id="style-heading" className="mb-2 text-sm font-medium text-muted">
+        Plan style · pick one of three
+      </h2>
+      <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-labelledby="style-heading">
+        {SPLIT_STYLES.map((o) => {
+          const on = o.value === program.style;
+          const allowed = offered.includes(o.value);
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              disabled={!allowed}
+              onClick={() => onChange(o.value)}
+              className={`rounded-xl border px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                on ? 'border-brand bg-brand-soft' : 'border-border bg-surface hover:border-muted'
+              }`}
+            >
+              <span className="flex flex-wrap items-center gap-2 font-semibold">
+                {o.label}
+                {o.value === program.recommendedStyle ? (
+                  <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-on-brand">Recommended</span>
+                ) : null}
+              </span>
+              <span className="mt-0.5 block text-sm text-muted">{allowed ? o.hint : `Needs ${o.minDays}+ training days a week.`}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

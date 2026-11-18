@@ -3,6 +3,9 @@ export {
   generateProgram,
   minutesOf,
   nextDayIndex,
+  recommendedSplit,
+  SPLIT_STYLES,
+  splitStylesFor,
   ProgramError,
   WEEKDAYS_FOR,
   WORKOUT_PLANNER_VERSION,
@@ -12,6 +15,7 @@ export {
   type Program,
   type ProgramDay,
   type ProgramRequest,
+  type SplitStyle,
   type Unit,
 } from './program.js';
 export { incrementKg, suggestNext, type LoggedSet, type Suggestion, type SuggestionKind } from './progression.js';

@@ -5,7 +5,7 @@
  */
 import { canUse, exerciseById, PREFERENCE, type Equipment, type Exercise, type Pattern } from './exercises.js';
 
-export const WORKOUT_PLANNER_VERSION = '2026.11.1';
+export const WORKOUT_PLANNER_VERSION = '2026.11.2';
 
 export type Experience = 'beginner' | 'intermediate' | 'advanced';
 export type Goal = 'fat_loss' | 'recomposition' | 'lean_gain' | 'weight_gain' | 'maintenance' | 'strength' | 'endurance';
@@ -17,6 +17,30 @@ export interface ProgramRequest {
   experience: Experience;
   goal: Goal;
   equipment: Equipment;
+  /** The user's chosen style; left out, the best fit for their days and experience is used. */
+  split?: SplitStyle | undefined;
+}
+
+/** The three kinds of weekly plan a user can choose between. */
+export type SplitStyle = 'full_body' | 'upper_lower' | 'ppl';
+
+export const SPLIT_STYLES: ReadonlyArray<{ value: SplitStyle; label: string; hint: string; minDays: number }> = [
+  { value: 'full_body', label: 'Full body', hint: 'Every muscle each session. Best for 1–3 days and for beginners.', minDays: 1 },
+  { value: 'upper_lower', label: 'Upper / lower', hint: 'Alternate upper-body and lower-body days. Best for 2–4 days.', minDays: 2 },
+  { value: 'ppl', label: 'Push / pull / legs', hint: 'Chest and shoulders, then back, then legs. Best for 3 or 6 days.', minDays: 3 },
+];
+
+/** Styles that make sense for this many training days. */
+export function splitStylesFor(days: number): SplitStyle[] {
+  return SPLIT_STYLES.filter((s) => days >= s.minDays).map((s) => s.value);
+}
+
+/** The style used when the user hasn't chosen one. */
+export function recommendedSplit(days: number, experience: Experience): SplitStyle {
+  if (days <= 2) return 'full_body';
+  if (days === 3) return experience === 'advanced' ? 'ppl' : 'full_body';
+  if (days === 4 || (days === 5 && experience === 'beginner')) return 'upper_lower';
+  return days === 5 ? 'upper_lower' : 'ppl';
 }
 
 export type Unit = 'reps' | 'seconds' | 'minutes';
@@ -47,6 +71,9 @@ export interface ProgramDay {
 
 export interface Program {
   version: string;
+  /** The style used, and the one we'd suggest for these answers. */
+  style: SplitStyle;
+  recommendedStyle: SplitStyle;
   splitName: string;
   daysPerWeek: number;
   days: ProgramDay[];
@@ -120,23 +147,34 @@ interface Split {
   days: Template[];
 }
 
-function splitFor(days: number, experience: Experience): Split {
-  switch (days) {
-    case 1:
-      return { name: 'Full body, once a week', days: [T.fb_a!] };
-    case 2:
-      return { name: 'Full body, twice a week', days: [T.fb_a!, T.fb_b!] };
-    case 3:
-      return experience === 'advanced'
-        ? { name: 'Push, pull, legs', days: [T.push_a!, T.pull_a!, T.legs_a!] }
-        : { name: 'Full body, three times a week', days: [T.fb_a!, T.fb_b!, T.fb_c!] };
-    case 4:
-      return { name: 'Upper and lower, twice each', days: [T.upper_a!, T.lower_a!, T.upper_b!, T.lower_b!] };
-    case 5:
-      return { name: 'Upper, lower, push, pull, legs', days: [T.upper_a!, T.lower_a!, T.push_a!, T.pull_a!, T.legs_b!] };
-    default:
-      return { name: 'Push, pull, legs, twice a week', days: [T.push_a!, T.pull_a!, T.legs_a!, T.push_b!, T.pull_b!, T.legs_b!] };
+const ROTATIONS: Record<SplitStyle, Template[]> = {
+  full_body: [T.fb_a!, T.fb_b!, T.fb_c!],
+  upper_lower: [T.upper_a!, T.lower_a!, T.upper_b!, T.lower_b!],
+  ppl: [T.push_a!, T.pull_a!, T.legs_a!, T.push_b!, T.pull_b!, T.legs_b!],
+};
+
+const SPLIT_NAME: Record<SplitStyle, string> = {
+  full_body: 'Full body',
+  upper_lower: 'Upper and lower',
+  ppl: 'Push, pull, legs',
+};
+
+const TIMES = ['', 'once', 'twice', 'three times', 'four times', 'five times', 'six times'];
+
+/**
+ * The days of the week for a style: its day types in order, repeated when
+ * there are more training days than types (e.g. upper/lower on 6 days).
+ * A repeated day gets its own key so logs can tell the two apart.
+ */
+function splitFor(days: number, style: SplitStyle): Split {
+  const rotation = ROTATIONS[style];
+  const out: Template[] = [];
+  for (let i = 0; i < days; i++) {
+    const tpl = rotation[i % rotation.length]!;
+    const round = Math.floor(i / rotation.length);
+    out.push(round === 0 ? tpl : { ...tpl, key: `${tpl.key}_${round + 1}`, name: `${tpl.name} (again)` });
   }
+  return { name: `${SPLIT_NAME[style]}, ${TIMES[days]} a week`, days: out };
 }
 
 /** Training days spread across the week (0 = Monday) so muscles get rest in between. */
@@ -258,7 +296,13 @@ export function generateProgram(req: ProgramRequest): Program {
     notes.push(`As a beginner you get the most from 4 strength days. Use your other ${req.daysPerWeek - 4 === 1 ? 'day' : 'days'} for walking or light cardio.`);
   }
   const scheme = schemeOf(req.goal);
-  const split = splitFor(days, req.experience);
+  const recommended = recommendedSplit(days, req.experience);
+  const style = req.split && splitStylesFor(days).includes(req.split) ? req.split : recommended;
+  if (req.split && req.split !== style) {
+    notes.push(`${SPLIT_NAME[req.split]} needs at least ${SPLIT_STYLES.find((x) => x.value === req.split)!.minDays} training days, so this plan uses ${SPLIT_NAME[style].toLowerCase()}.`);
+  }
+  if (style === 'ppl' && days < 6) notes.push('With push, pull, legs on fewer than 6 days, keep rotating in order: each week picks up where the last one stopped.');
+  const split = splitFor(days, style);
   const weekdays = WEEKDAYS_FOR[days]!;
   const built = split.days.map((tpl, i) => buildDay(tpl, weekdays[i]!, req, scheme));
 
@@ -268,7 +312,7 @@ export function generateProgram(req: ProgramRequest): Program {
   }
   if (req.goal === 'fat_loss') notes.push('Lifting keeps your muscle while you lose fat. Your daily steps matter as much as these sessions.');
 
-  return { version: WORKOUT_PLANNER_VERSION, splitName: split.name, daysPerWeek: days, days: built, notes };
+  return { version: WORKOUT_PLANNER_VERSION, style, recommendedStyle: recommended, splitName: split.name, daysPerWeek: days, days: built, notes };
 }
 
 /** The day to do next: the one after the most recently logged day of this program. */
