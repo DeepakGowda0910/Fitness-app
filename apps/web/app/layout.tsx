@@ -6,10 +6,10 @@ import { AppDataProvider } from '@/lib/app-data';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'Fitness', template: '%s · Fitness' },
+  title: { default: 'Hyper Active', template: '%s · Hyper Active' },
   description: 'Calorie and macro targets, Indian diet plans and weekly check-ins that adapt to you.',
-  applicationName: 'Fitness',
-  appleWebApp: { capable: true, title: 'Fitness', statusBarStyle: 'default' },
+  applicationName: 'Hyper Active',
+  appleWebApp: { capable: true, title: 'Hyper Active', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {
@@ -17,8 +17,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f6f7f5' },
-    { media: '(prefers-color-scheme: dark)', color: '#0f1412' },
+    { media: '(prefers-color-scheme: light)', color: '#f5f7fa' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f1419' },
   ],
 };
 
@@ -30,10 +30,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-20 border-b border-border bg-bg/90 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 lg:px-8">
             <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-              <span aria-hidden className="grid size-7 place-items-center rounded-lg bg-brand text-sm text-on-brand">
-                F
+              <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-brand text-xs font-extrabold tracking-tight text-on-brand">
+                HA
               </span>
-              <span className="hidden sm:inline">Fitness</span>
+              <span className="hidden sm:inline">Hyper Active</span>
             </Link>
             <nav className="flex items-center gap-0.5 text-sm sm:gap-1">
               <Link href="/assessment" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">

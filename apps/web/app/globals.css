@@ -1,17 +1,17 @@
 @import 'tailwindcss';
 
 :root {
-  --bg: #f6f7f5;
+  --bg: #f5f7fa;
   --surface: #ffffff;
-  --surface-2: #eef1ed;
-  --text: #17201b;
-  --muted: #5b6760;
-  --border: #dde3de;
-  --brand: #0f766e;
-  --brand-strong: #0b5f58;
-  --brand-soft: #dff3ef;
+  --surface-2: #edf1f6;
+  --text: #16202a;
+  --muted: #5a6675;
+  --border: #dbe2ea;
+  --brand: #0273b3;
+  --brand-strong: #035e93;
+  --brand-soft: #e0f2fe;
   --on-brand: #ffffff;
-  --protein: #0f766e;
+  --protein: #0273b3;
   --carbs: #c2410c;
   --fat: #7c3aed;
   --warn-bg: #fff6e5;
@@ -25,17 +25,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1412;
-    --surface: #171e1b;
-    --surface-2: #1f2824;
-    --text: #e8eeea;
-    --muted: #9aa8a0;
-    --border: #2b3631;
-    --brand: #2dd4bf;
-    --brand-strong: #5eead4;
-    --brand-soft: #123a35;
-    --on-brand: #04201d;
-    --protein: #2dd4bf;
+    --bg: #0f1419;
+    --surface: #161d24;
+    --surface-2: #1e2730;
+    --text: #e8eef4;
+    --muted: #9aa6b2;
+    --border: #2a3540;
+    --brand: #38bdf8;
+    --brand-strong: #7dd3fc;
+    --brand-soft: #0c2d48;
+    --on-brand: #082f49;
+    --protein: #38bdf8;
     --carbs: #fb923c;
     --fat: #a78bfa;
     --warn-bg: #2d2412;
