@@ -1,12 +1,12 @@
 'use client';
 
-import type { NutritionTargets } from '@fitness/calc-engine';
+import type { DayTargets } from '@fitness/calc-engine';
 import { generateWeekPlan, PlanError, type PlannedDay, type PlannedMeal, type WeekPlan } from '@fitness/meal-planner';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AssessmentDraft } from '@/lib/assessment';
 import { DIET_TYPES, labelOf } from '@/lib/labels';
-import { dayTargetsOf, DEFAULT_PLAN_SETTINGS, localToday, nutrientRows, planRequestOf, slotLabel, type PlanSettings } from '@/lib/plan';
+import { DEFAULT_PLAN_SETTINGS, localToday, nutrientRows, planRequestOf, slotLabel, type PlanSettings } from '@/lib/plan';
 import { useTargets } from '@/lib/targets';
 import { Notice } from './fields';
 import { NoTargets } from './results-view';
@@ -35,7 +35,7 @@ export function PlanView() {
   const state = useTargets();
   if (state.status === 'loading') return <Skeleton />;
   if (state.status === 'incomplete') return <NoTargets started={Object.keys(state.draft).length > 0} />;
-  return <Plan targets={state.targets} draft={state.draft} />;
+  return <Plan targets={state.active} adjusted={state.adjusted} draft={state.draft} />;
 }
 
 function Skeleton() {
@@ -44,7 +44,7 @@ function Skeleton() {
 
 type PlanResult = { plan: WeekPlan } | { error: string };
 
-function Plan({ targets, draft }: { targets: NutritionTargets; draft: AssessmentDraft }) {
+function Plan({ targets, adjusted, draft }: { targets: DayTargets; adjusted: boolean; draft: AssessmentDraft }) {
   const [settings, setSettings] = useState<PlanSettings | null>(null);
   const [startDate] = useState(localToday);
   const [result, setResult] = useState<PlanResult | null>(null);
@@ -84,7 +84,7 @@ function Plan({ targets, draft }: { targets: NutritionTargets; draft: Assessment
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <p className="text-sm font-medium text-brand">
-          {labelOf(DIET_TYPES, draft.dietType)} · {draft.mealsPerDay} meals a day · {fmt(targets.calories)} kcal
+          {labelOf(DIET_TYPES, draft.dietType)} · {draft.mealsPerDay} meals a day · {fmt(targets.calories)} kcal{adjusted ? ' (updated by check-in)' : ''}
         </p>
         <h1 className="text-3xl font-semibold tracking-tight">Your 7-day diet plan</h1>
       </div>
@@ -126,7 +126,6 @@ function Plan({ targets, draft }: { targets: NutritionTargets; draft: Assessment
 
   const { plan } = result;
   const day = plan.days[Math.min(dayIndex, plan.days.length - 1)]!;
-  const dayTargets = dayTargetsOf(targets);
 
   return (
     <div className="space-y-6">
@@ -155,7 +154,7 @@ function Plan({ targets, draft }: { targets: NutritionTargets; draft: Assessment
           ))}
         </div>
         <aside className="order-first lg:order-none lg:sticky lg:top-24">
-          <DaySummary day={day} targets={dayTargets} />
+          <DaySummary day={day} targets={targets} />
         </aside>
       </div>
 
@@ -237,7 +236,7 @@ function MealCard({ meal, onSwap }: { meal: PlannedMeal; onSwap: () => void }) {
   );
 }
 
-function DaySummary({ day, targets }: { day: PlannedDay; targets: ReturnType<typeof dayTargetsOf> }) {
+function DaySummary({ day, targets }: { day: PlannedDay; targets: DayTargets }) {
   const rows = nutrientRows(day.totals, targets, day.checks);
   return (
     <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">

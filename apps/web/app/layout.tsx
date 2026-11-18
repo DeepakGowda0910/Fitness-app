@@ -41,7 +41,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 Targets
               </Link>
               <Link href="/plan" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
-                Diet plan
+                <span className="sm:hidden">Plan</span>
+                <span className="hidden sm:inline">Diet plan</span>
+              </Link>
+              <Link href="/checkin" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+                Check-in
               </Link>
             </nav>
           </div>

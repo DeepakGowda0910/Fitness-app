@@ -2,7 +2,7 @@ import { computeTargets } from '@fitness/calc-engine';
 import { DISHES, generateWeekPlan, PlanError } from '@fitness/meal-planner';
 import { describe, expect, it } from 'vitest';
 import { toTargetsInput, type AssessmentDraft } from '@/lib/assessment';
-import { localToday, nutrientRows, planRequestOf } from '@/lib/plan';
+import { dayTargetsOf, localToday, nutrientRows, planRequestOf } from '@/lib/plan';
 
 const draft: AssessmentDraft = {
   sex: 'male',
@@ -19,7 +19,7 @@ const draft: AssessmentDraft = {
   allergies: ['peanut'],
   mealsPerDay: 4,
 };
-const targets = computeTargets(toTargetsInput(draft));
+const targets = dayTargetsOf(computeTargets(toTargetsInput(draft)));
 
 describe('planRequestOf', () => {
   it('builds a plan from the assessment that respects diet and allergies', () => {
