@@ -11,7 +11,7 @@
 
 import type { Goal } from './types.js';
 
-export const POLICY_VERSION = '2026.11.0';
+export const POLICY_VERSION = '2026.11.1';
 
 export interface GoalPolicy {
   /** Protein in g per kg of reference weight: the default used, and the guidance range. */
@@ -104,6 +104,33 @@ export const policy = {
     /** Rate used to suggest a realistic date. */
     suggestedLossRatePct: 0.5,
     suggestedGainRatePct: 0.25,
+  },
+
+  /** Weekly check-in and adaptive targets. */
+  adaptive: {
+    /** EMA smoothing per day for trend weight (0.1 ≈ Hacker's Diet). */
+    trendAlphaPerDay: 0.1,
+    adherence: { minDietAdherencePct: 80, minDaysLogged: 4 },
+    /** 1–5 scales. A week is "poor recovery" when any of these is met. */
+    recovery: { hungerAtLeast: 4, energyAtMost: 2, sleepQualityAtMost: 2, consecutiveWeeks: 2 },
+    /** Goal target weekly rate (% body weight). Fat loss uses the user's chosen rate. */
+    targetWeeklyRatePct: {
+      lean_gain: 0.25,
+      weight_gain: 0.35,
+    },
+    /** Goals aiming at stable weight: trend within ± this band counts as maintaining. */
+    maintainingBandPct: 0.25,
+    /** Actual/target ratio bands for loss and gain goals. */
+    fasterAbove: 1.5,
+    slowerBelow: 0.5,
+    /** Plateau: under this share of the target rate for N weeks with good adherence. */
+    plateau: { belowRatio: 0.25, weeks: 3 },
+    /** Calorie change limits per week (kcal/day). */
+    change: { min: 50, max: 150, roundTo: 10 },
+    /** Weeks of good logging needed before observed TDEE is reported. */
+    observedTdeeMinWeeks: 3,
+    /** Cycle-aware: compare over this many weeks instead of one. */
+    cycleAwareWeeks: 4,
   },
 
   /** Calories are rounded to this step before macros are derived. */

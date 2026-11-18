@@ -82,3 +82,42 @@ macros match calories within 1%, no negative macros, fat ≥ 20% of calories,
 deficits never cross a floor or exceed 25% of TDEE, a "refer" outcome never
 gets a deficit, the activity factor stays within 1.2–1.9, and results are
 deterministic.
+
+## Weekly check-in and adaptive targets
+
+`assessCheckin()` takes the current target version, all weigh-ins and the
+check-in weeks, and returns a status, a decision, the rule that fired and, when
+calories change, the new targets. The gates run in a fixed order:
+
+1. **Trend weight.** Weigh-ins are averaged per day, then smoothed with a
+   time-aware exponential moving average (α = 0.1 per day, so a 10-day gap
+   counts for 1 − 0.9¹⁰ ≈ 65%). A 1.5 kg spike moves the trend by 0.15 kg.
+2. **Rate.** Change in trend weight over the last 7 days, as % of body weight.
+   If the user tracks a menstrual cycle and 4 weeks of data exist, the 4-week
+   average is used instead. No weigh-ins for both ends → no change.
+3. **Adherence gate.** Diet adherence under 80% or fewer than 4 days logged →
+   `hold_for_adherence`; calories do not change.
+4. **Recovery gate.** Two weeks in a row with hunger ≥ 4, energy ≤ 2 or sleep
+   ≤ 2 (1–5 scales) → for fat loss or recomposition, `suggest_diet_break`
+   (maintenance week) before any further cut; otherwise no change.
+5. **Classify** against the goal's target rate (fat loss: the chosen rate,
+   default −0.5%/week; lean gain +0.25%; healthy weight gain +0.35%; all other
+   goals 0 with a ±0.25% band):
+   - plateau: under 25% of the target rate for 3 weeks, all with good adherence
+   - faster: more than 1.5× the target rate
+   - slower: under 0.5× the target rate
+   - on track otherwise; for stable-weight goals, maintaining / drifting up / drifting down
+6. **Adjust.** Only plateau, faster, slower or drifting change calories. The
+   size is the rate gap converted to kcal (gap% × weight × 7700 / 7), rounded
+   to 10 and clamped to **50–150 kcal/day**. Protein never changes; fat scales
+   with calories down to its minimum and carbs take the rest. A decrease never
+   goes below BMR or the 1,200 / 1,500 kcal floors (`at_floor` when already
+   there), and is blocked entirely when safety screening forbids a deficit.
+
+**Observed TDEE.** After 3 or more consecutive good-adherence weeks with
+logged intake, maintenance is estimated as average intake minus the energy in
+the trend-weight change (7,700 kcal/kg). It is reported for the explanation
+and for later blending; it does not change the decision yet.
+
+Every result records `engineVersion`, `ruleFired` and plain-language
+`reasons` that the app (or later an AI explanation) can show.
