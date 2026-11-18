@@ -13,6 +13,7 @@ follow the device setting.
 | `/assessment` | Six steps: about you, activity, goal, health check, food, review. Resumes at the first unanswered step |
 | `/results` | Calories, macros, fibre, water, maintenance and resting energy, safety notices, and how each number was worked out |
 | `/plan` | 7-day Indian diet plan sized to the targets: day tabs, meals with raw-ingredient grams and household units, day totals against targets, "Swap this dish" and "Shuffle dishes" |
+| `/admin` | For admins only: user list with search and status filter, sign-up progress, suspend, reactivate, delete (super admin), and recent admin activity. Cards on phones, a table on laptops. See `docs/database.md`, "Admin area" |
 | `/checkin` | Log weigh-ins (with a smoothed trend chart) and a weekly check-in: days followed, adherence, hunger, energy, sleep. The engine decides whether calories change; the new targets flow to `/results` and `/plan`. One check-in per week; protein never changes |
 
 Targets, check-in decisions and the diet plan are always calculated in the browser by `@fitness/calc-engine` and `@fitness/meal-planner`, the same

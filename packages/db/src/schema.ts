@@ -40,6 +40,8 @@ const userId = () =>
 // ---------- Enums ----------
 
 export const userStatus = pgEnum('user_status', ['active', 'suspended', 'deleted']);
+/** Staff roles for the admin area. Trainer and nutritionist roles come in Phase 4. */
+export const adminRole = pgEnum('admin_role', ['super_admin', 'admin']);
 export const unitSystem = pgEnum('unit_system', ['metric', 'imperial']);
 export const sexForCalculation = pgEnum('sex_for_calculation', ['male', 'female']);
 export const consentPurpose = pgEnum('consent_purpose', [
@@ -144,6 +146,19 @@ export const consents = pgTable(
   },
   (t) => [index('consents_user_purpose_idx').on(t.userId, t.purpose, t.createdAt)],
 );
+
+/**
+ * Who may use the admin area. Granted only from the Supabase SQL editor with
+ * grant_admin_role(); nobody can read or change it through the Data API
+ * (migrations/0006_admin_access.sql).
+ */
+export const adminRoles = pgTable('admin_roles', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  role: adminRole('role').notNull(),
+  createdAt: createdAt(),
+});
 
 /** Append-only. Not cascaded: kept (with subject anonymised) after account deletion. */
 export const auditLogs = pgTable(

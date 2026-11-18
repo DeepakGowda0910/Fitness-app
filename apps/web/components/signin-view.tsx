@@ -7,7 +7,7 @@ import { signInRedirectUrl, supabase } from '@/lib/supabase';
 import { Notice } from './fields';
 
 export function SignInView() {
-  const { ready, mode, email, signOut } = useAppData();
+  const { ready, mode, email, adminRole, signOut } = useAppData();
 
   if (!cloudEnabled) {
     return (
@@ -29,6 +29,11 @@ export function SignInView() {
           <Link href="/results" className="inline-flex h-12 items-center justify-center rounded-xl bg-brand px-6 font-semibold text-on-brand hover:bg-brand-strong">
             My targets
           </Link>
+          {adminRole ? (
+            <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-xl border border-border bg-surface px-6 font-medium hover:bg-surface-2">
+              Admin
+            </Link>
+          ) : null}
           <button type="button" onClick={() => void signOut()} className="h-12 rounded-xl border border-border bg-surface px-6 font-medium hover:bg-surface-2">
             Sign out
           </button>

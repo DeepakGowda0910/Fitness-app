@@ -430,6 +430,239 @@ ALTER TABLE food_portions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY food_portions_read ON food_portions FOR SELECT TO authenticated USING (true);
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('12c717243a4af352e2720a4db1470fa703a31222ad9ce5fcb3a9f7384c01c998', 1794990719340);
 
+-- ===== 0005_admin_roles =====
+CREATE TYPE "public"."admin_role" AS ENUM('super_admin', 'admin');
+CREATE TABLE "admin_roles" (
+	"user_id" uuid PRIMARY KEY NOT NULL,
+	"role" "admin_role" NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE "admin_roles" ADD CONSTRAINT "admin_roles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('0e154dbd543b6f89a413509a27404403d204ac650358a3e1c4d78bf21496b8bf', 1795013105613);
+
+-- ===== 0006_admin_access =====
+-- Admin area: who is an admin, what admins may do, and an audit trail.
+--
+-- The web app is a static site that talks to Supabase with the public
+-- (publishable) key, so admin powers cannot rely on a secret key in the page.
+-- Instead every admin action is a SECURITY DEFINER function below. Each one
+-- checks that the caller is an active admin before doing anything, writes an
+-- audit_logs row, and returns only what the admin screen needs: no names,
+-- body measurements, health answers or check-in contents.
+--
+-- Roles: super_admin can do everything; admin can list users, suspend and
+-- reactivate them. Nobody can act on an admin account (including their own)
+-- from the app; that is done in the Supabase SQL editor.
+
+-- Suspended (or deleted) users lose access to their data through the Data API.
+-- They can still read their own `users` row, so the app can tell them why.
+CREATE OR REPLACE FUNCTION public.app_user_id() RETURNS uuid
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT id FROM public.users WHERE auth_provider_id = auth.uid()::text AND status = 'active'
+$$;
+
+-- Users may edit their own row, but never their own status.
+CREATE FUNCTION public.users_guard_status() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'INSERT' AND current_user IN ('anon', 'authenticated') THEN
+    NEW.status := 'active';
+  ELSIF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status AND current_user IN ('anon', 'authenticated') THEN
+    RAISE EXCEPTION 'Only an admin can change an account''s status' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER users_guard_status BEFORE INSERT OR UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.users_guard_status();
+
+-- Nobody reaches admin_roles through the Data API: RLS on, no policies.
+ALTER TABLE public.admin_roles ENABLE ROW LEVEL SECURITY;
+
+-- The caller's admin role, or null. Safe for anyone to call: it only says
+-- whether *you* are an admin, so the app knows whether to show the Admin link.
+CREATE FUNCTION public.my_admin_role() RETURNS public.admin_role
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT r.role FROM public.admin_roles r JOIN public.users u ON u.id = r.user_id
+  WHERE u.auth_provider_id = auth.uid()::text AND u.status = 'active'
+$$;
+
+-- Raises unless the caller is an active admin with at least `needed`. Returns their users.id.
+CREATE FUNCTION public.require_admin(needed public.admin_role) RETURNS uuid
+  LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  me uuid;
+  my_role public.admin_role;
+BEGIN
+  SELECT u.id, r.role INTO me, my_role FROM public.admin_roles r JOIN public.users u ON u.id = r.user_id
+  WHERE u.auth_provider_id = auth.uid()::text AND u.status = 'active';
+  IF me IS NULL OR (needed = 'super_admin' AND my_role <> 'super_admin') THEN
+    RAISE EXCEPTION 'Not allowed: this needs the % role', needed USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN me;
+END;
+$$;
+
+CREATE FUNCTION public.admin_list_users()
+  RETURNS TABLE (
+    id uuid,
+    email text,
+    status public.user_status,
+    admin_role public.admin_role,
+    joined_at timestamptz,
+    last_sign_in_at timestamptz,
+    onboarding text,
+    checkins integer,
+    last_checkin_at timestamptz
+  )
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+#variable_conflict use_column
+DECLARE
+  me uuid := public.require_admin('admin');
+BEGIN
+  INSERT INTO public.audit_logs (actor_id, action, entity) VALUES (me, 'admin.list_users', 'users');
+  RETURN QUERY
+  SELECT
+    u.id,
+    u.email,
+    u.status,
+    r.role,
+    u.created_at,
+    au.last_sign_in_at,
+    CASE
+      WHEN a.status = 'completed' THEN 'completed'
+      WHEN a.id IS NOT NULL THEN 'in_progress'
+      ELSE 'not_started'
+    END,
+    (SELECT count(*)::int FROM public.weekly_checkins c WHERE c.user_id = u.id AND c.submitted_at IS NOT NULL),
+    (SELECT max(c.submitted_at) FROM public.weekly_checkins c WHERE c.user_id = u.id)
+  FROM public.users u
+  LEFT JOIN public.admin_roles r ON r.user_id = u.id
+  LEFT JOIN auth.users au ON au.id::text = u.auth_provider_id
+  LEFT JOIN LATERAL (
+    SELECT x.id, x.status FROM public.assessments x WHERE x.user_id = u.id ORDER BY x.version DESC LIMIT 1
+  ) a ON true
+  ORDER BY u.created_at DESC;
+END;
+$$;
+
+-- Suspend (blocks sign-in and data access) or reactivate a user.
+CREATE FUNCTION public.admin_set_user_status(target uuid, new_status public.user_status) RETURNS void
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  me uuid := public.require_admin('admin');
+  auth_id text;
+BEGIN
+  IF new_status NOT IN ('active', 'suspended') THEN
+    RAISE EXCEPTION 'Status must be active or suspended' USING ERRCODE = 'invalid_parameter_value';
+  END IF;
+  IF target = me OR EXISTS (SELECT 1 FROM public.admin_roles WHERE user_id = target) THEN
+    RAISE EXCEPTION 'Admin accounts can only be changed in the Supabase SQL editor' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  UPDATE public.users SET status = new_status, updated_at = now() WHERE id = target AND status <> 'deleted'
+    RETURNING auth_provider_id INTO auth_id;
+  IF auth_id IS NULL THEN
+    RAISE EXCEPTION 'No such user' USING ERRCODE = 'no_data_found';
+  END IF;
+  -- Supabase Auth refuses sign-in and token refresh for banned users.
+  UPDATE auth.users SET banned_until = CASE WHEN new_status = 'suspended' THEN 'infinity'::timestamptz END
+    WHERE id::text = auth_id;
+  INSERT INTO public.audit_logs (actor_id, action, entity, entity_id, subject_user_id)
+    VALUES (me, CASE WHEN new_status = 'suspended' THEN 'admin.suspend_user' ELSE 'admin.reactivate_user' END, 'users', target, target);
+END;
+$$;
+
+-- Permanently delete a user and all their data (super_admin only). The caller
+-- must pass the account's email as a typed confirmation.
+CREATE FUNCTION public.admin_delete_user(target uuid, confirm_email text) RETURNS void
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  me uuid := public.require_admin('super_admin');
+  auth_id text;
+  target_email text;
+BEGIN
+  IF target = me OR EXISTS (SELECT 1 FROM public.admin_roles WHERE user_id = target) THEN
+    RAISE EXCEPTION 'Admin accounts can only be changed in the Supabase SQL editor' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  SELECT auth_provider_id, email INTO auth_id, target_email FROM public.users WHERE id = target;
+  IF auth_id IS NULL THEN
+    RAISE EXCEPTION 'No such user' USING ERRCODE = 'no_data_found';
+  END IF;
+  IF lower(trim(confirm_email)) <> lower(target_email) THEN
+    RAISE EXCEPTION 'The email typed does not match this account' USING ERRCODE = 'invalid_parameter_value';
+  END IF;
+  -- The log keeps only the account's random id, never its email.
+  INSERT INTO public.audit_logs (actor_id, action, entity, entity_id, subject_user_id)
+    VALUES (me, 'admin.delete_user', 'users', target, target);
+  DELETE FROM public.users WHERE id = target; -- cascades to all of their data
+  DELETE FROM auth.users WHERE id::text = auth_id; -- and their sign-in
+END;
+$$;
+
+-- Recent admin actions, newest first, for the admin screen.
+CREATE FUNCTION public.admin_recent_actions(max_rows integer DEFAULT 50)
+  RETURNS TABLE (at timestamptz, actor_email text, action text, subject_user_id uuid, subject_email text)
+  LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+#variable_conflict use_column
+BEGIN
+  PERFORM public.require_admin('admin');
+  RETURN QUERY
+  SELECT l.at, actor.email, l.action, l.subject_user_id, subj.email
+  FROM public.audit_logs l
+  LEFT JOIN public.users actor ON actor.id = l.actor_id
+  LEFT JOIN public.users subj ON subj.id = l.subject_user_id
+  WHERE l.action LIKE 'admin.%'
+  ORDER BY l.at DESC
+  LIMIT least(greatest(max_rows, 1), 200);
+END;
+$$;
+
+-- Make someone an admin, or remove their role (pass NULL). Only from the
+-- Supabase SQL editor: the app's roles cannot run it. They must have signed
+-- in to the app once, so that their account exists.
+--   SELECT public.grant_admin_role('you@example.com', 'super_admin');
+CREATE FUNCTION public.grant_admin_role(user_email text, new_role public.admin_role) RETURNS text
+  LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+  target uuid;
+BEGIN
+  SELECT id INTO target FROM public.users WHERE lower(email) = lower(trim(user_email));
+  IF target IS NULL THEN
+    RAISE EXCEPTION 'No account with that email. Sign in to the app with it once, then run this again.';
+  END IF;
+  IF new_role IS NULL THEN
+    DELETE FROM public.admin_roles WHERE user_id = target;
+  ELSE
+    INSERT INTO public.admin_roles (user_id, role) VALUES (target, new_role)
+      ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role;
+  END IF;
+  INSERT INTO public.audit_logs (action, entity, entity_id, subject_user_id)
+    VALUES (CASE WHEN new_role IS NULL THEN 'admin.revoke_role' ELSE 'admin.grant_role:' || new_role END, 'admin_roles', target, target);
+  RETURN CASE WHEN new_role IS NULL THEN 'Removed admin role from ' ELSE 'Granted ' || new_role || ' to ' END || user_email;
+END;
+$$;
+
+-- Supabase gives anon and authenticated EXECUTE on new functions by default; take it back.
+REVOKE ALL ON FUNCTION public.users_guard_status() FROM PUBLIC, anon, authenticated;
+
+REVOKE ALL ON FUNCTION public.require_admin(public.admin_role) FROM PUBLIC, anon, authenticated;
+
+REVOKE ALL ON FUNCTION public.grant_admin_role(text, public.admin_role) FROM PUBLIC, anon, authenticated;
+
+REVOKE ALL ON FUNCTION public.my_admin_role() FROM PUBLIC, anon;
+
+REVOKE ALL ON FUNCTION public.admin_list_users() FROM PUBLIC, anon;
+
+REVOKE ALL ON FUNCTION public.admin_set_user_status(uuid, public.user_status) FROM PUBLIC, anon;
+
+REVOKE ALL ON FUNCTION public.admin_delete_user(uuid, text) FROM PUBLIC, anon;
+
+REVOKE ALL ON FUNCTION public.admin_recent_actions(integer) FROM PUBLIC, anon;
+
+GRANT EXECUTE ON FUNCTION public.my_admin_role(), public.admin_list_users(), public.admin_set_user_status(uuid, public.user_status),
+  public.admin_delete_user(uuid, text), public.admin_recent_actions(integer) TO authenticated;
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('b99d046f159fabd0c95cf6781a97f1f75b814e3696255c5bca206913e5ee226b', 1795013106212);
+
 -- ===== Access for signed-in users =====
 -- Row-level security (above) decides which rows each user can see or change.
 -- Nothing in this app is meant for signed-out visitors, so they get no table access at all.

@@ -33,6 +33,8 @@ const KNOWN_KEYS = new Set(Object.keys(SECTION));
 /** Weigh-ins are stored at midday UTC on their date, so the date survives any time zone. */
 const measuredAtOf = (date: string) => `${date}T12:00:00.000Z`;
 
+export const SUSPENDED_MESSAGE = 'This account has been suspended, so nothing is saved to it. Contact the app owner if you think this is a mistake.';
+
 function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`Could not ${what}: ${res.error.message}`);
   return res.data;
@@ -45,9 +47,13 @@ function check<T>(res: { data: T; error: { message: string } | null }, what: str
 export async function cloudBackend(db: SupabaseClient, authUserId: string, email: string): Promise<Backend> {
   // The account row, created on first sign-in.
   let userId: string;
-  const existing = check(await db.from('users').select('id').eq('auth_provider_id', authUserId).maybeSingle(), 'load your account');
+  const existing = check(
+    await db.from('users').select('id, status').eq('auth_provider_id', authUserId).maybeSingle(),
+    'load your account',
+  ) as { id: string; status: string } | null;
   if (existing) {
-    userId = (existing as { id: string }).id;
+    if (existing.status !== 'active') throw new Error(SUSPENDED_MESSAGE);
+    userId = existing.id;
   } else {
     const created = check(
       await db.from('users').insert({ auth_provider_id: authUserId, email }).select('id').single(),
