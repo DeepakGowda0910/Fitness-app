@@ -16,6 +16,7 @@ import {
   BODY_FAT_SOURCES,
   CONDITIONS,
   DIET_TYPES,
+  EQUIPMENT,
   EXPERIENCE,
   FAT_LOSS_PACE,
   GOALS,
@@ -239,6 +240,11 @@ function ActivityStep({ d, set, e }: StepProps) {
           error={e.sessionMinutes}
         />
       ) : null}
+      {(d.trainingDaysPerWeek ?? 0) > 0 ? (
+        <Fieldset legend="Where do you train?" hint="Optional. Used for your workout plan; gym if you skip it.">
+          <ChoiceGroup name="equipment" value={d.equipment} options={EQUIPMENT} onChange={(equipment) => set({ equipment })} />
+        </Fieldset>
+      ) : null}
       <Fieldset legend="Training experience" error={e.experience}>
         <ChoiceGroup name="experience" value={d.experience} options={EXPERIENCE} onChange={(experience) => set({ experience })} />
       </Fieldset>
@@ -349,6 +355,7 @@ function ReviewStep({ d, go }: { d: AssessmentDraft; go: (s: StepId) => void }) 
           'Training',
           d.trainingDaysPerWeek ? `${d.trainingDaysPerWeek} days a week, ${d.sessionMinutes ?? '?'} min` : 'None',
         ],
+        ...((d.trainingDaysPerWeek ?? 0) > 0 ? ([['Trains', d.equipment ? labelOf(EQUIPMENT, d.equipment) : 'At a gym']] as Array<[string, string]>) : []),
         ['Experience', labelOf(EXPERIENCE, d.experience)],
       ],
     },

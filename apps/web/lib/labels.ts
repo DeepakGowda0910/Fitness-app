@@ -1,5 +1,5 @@
 import type { Allergen, DietType } from '@fitness/meal-planner';
-import type { BodyFatSource, Experience, Goal, HealthCondition, Occupation } from './assessment';
+import type { BodyFatSource, Equipment, Experience, Goal, HealthCondition, Occupation } from './assessment';
 
 export const OCCUPATIONS: Array<{ value: Occupation; label: string; hint: string }> = [
   { value: 'sedentary', label: 'Mostly sitting', hint: 'Desk job, studying, driving' },
@@ -12,6 +12,12 @@ export const EXPERIENCE: Array<{ value: Experience; label: string; hint: string 
   { value: 'beginner', label: 'New to training', hint: 'Less than a year' },
   { value: 'intermediate', label: 'Some experience', hint: '1 to 3 years' },
   { value: 'advanced', label: 'Experienced', hint: 'More than 3 years' },
+];
+
+export const EQUIPMENT: Array<{ value: Equipment; label: string; hint: string }> = [
+  { value: 'gym', label: 'At a gym', hint: 'Machines, barbells and dumbbells' },
+  { value: 'dumbbells', label: 'At home with dumbbells', hint: 'A pair of dumbbells, maybe a bench' },
+  { value: 'bodyweight', label: 'At home, no equipment', hint: 'Bodyweight, a chair and a backpack' },
 ];
 
 export const GOALS: Array<{ value: Goal; label: string; hint: string }> = [

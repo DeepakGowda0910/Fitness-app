@@ -39,7 +39,7 @@ export function localBackend(): Backend {
       return s;
     },
     async saveDraft(draft, since) {
-      save({ draft, tracking: { ...s.tracking, since: since ?? s.tracking.since } });
+      save({ ...s, draft, tracking: { ...s.tracking, since: since ?? s.tracking.since } });
     },
     async putWeighIn(date, weightKg, recordedAt) {
       const w = { date, weightKg, recordedAt };
@@ -51,6 +51,12 @@ export function localBackend(): Backend {
     },
     async addCheckin(checkin) {
       save({ ...s, tracking: { ...s.tracking, checkins: [...s.tracking.checkins, checkin] } });
+    },
+    async addWorkout(w) {
+      save({ ...s, workouts: [...s.workouts.filter((x) => x.id !== w.id), w] });
+    },
+    async deleteWorkout(id) {
+      save({ ...s, workouts: s.workouts.filter((x) => x.id !== id) });
     },
     async importAll(next) {
       save(next);

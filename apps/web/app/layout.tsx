@@ -7,7 +7,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: { default: 'Hyper Active', template: '%s · Hyper Active' },
-  description: 'Calorie and macro targets, Indian diet plans and weekly check-ins that adapt to you.',
+  description: 'Calorie and macro targets, Indian diet plans, workout plans and weekly check-ins that adapt to you.',
   applicationName: 'Hyper Active',
   appleWebApp: { capable: true, title: 'Hyper Active', statusBarStyle: 'default' },
 };
@@ -35,19 +35,23 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </span>
               <span className="hidden sm:inline">Hyper Active</span>
             </Link>
-            <nav className="flex items-center gap-0.5 text-sm sm:gap-1">
-              <Link href="/assessment" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+            <nav className="flex items-center gap-0 text-sm sm:gap-1">
+              <Link href="/assessment" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
                 <span className="sm:hidden">Start</span>
                 <span className="hidden sm:inline">Assessment</span>
               </Link>
-              <Link href="/results" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+              <Link href="/results" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
                 Targets
               </Link>
-              <Link href="/plan" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+              <Link href="/plan" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
                 <span className="sm:hidden">Plan</span>
                 <span className="hidden sm:inline">Diet plan</span>
               </Link>
-              <Link href="/checkin" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+              <Link href="/workouts" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+                <span className="sm:hidden">Train</span>
+                <span className="hidden sm:inline">Workouts</span>
+              </Link>
+              <Link href="/checkin" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
                 Check-in
               </Link>
               <AccountButton />

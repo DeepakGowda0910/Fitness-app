@@ -8,6 +8,7 @@ import { baseKeyOf, newCheckin, withWeighIn, type StoredWeighIn, type WeekAnswer
 import { cloudBackend } from './cloud-backend';
 import { localBackend } from './local-backend';
 import { connectOnce } from './session-sync';
+import type { StoredWorkout } from './workouts';
 import { cloudEnabled, supabase } from './supabase';
 
 export interface AppData {
@@ -18,12 +19,15 @@ export interface AppData {
   email: string | null;
   draft: AssessmentDraft;
   tracking: Snapshot['tracking'];
+  workouts: StoredWorkout[];
   /** Last save problem, shown to the user; cleared on the next successful save. */
   syncError: string | null;
   saveDraft: (d: AssessmentDraft) => void;
   addWeighIn: (date: string, weightKg: number) => void;
   removeWeighIn: (date: string) => void;
   submitCheckin: (answers: WeekAnswers, today: string, cycleAware: boolean) => void;
+  addWorkout: (w: StoredWorkout) => void;
+  removeWorkout: (id: string) => void;
   signOut: () => Promise<void>;
   /** True after the user opened a "reset your password" email, until they choose a new password. */
   recoveringPassword: boolean;
@@ -89,9 +93,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const cloud = await cloudBackend(db!, authUserId, userEmail);
         const remote = await cloud.load();
         // First sign-in: bring this browser's answers and history into the new account.
-        if (Object.keys(remote.draft).length === 0 && remote.tracking.weighIns.length === 0) {
+        if (Object.keys(remote.draft).length === 0 && remote.tracking.weighIns.length === 0 && remote.workouts.length === 0) {
           const here = await local.load();
-          if (Object.keys(here.draft).length > 0 || here.tracking.weighIns.length > 0) await cloud.importAll(here);
+          if (Object.keys(here.draft).length > 0 || here.tracking.weighIns.length > 0 || here.workouts.length > 0) await cloud.importAll(here);
         }
         if (!cancelled) await use(cloud, 'cloud', userEmail);
         setSyncError(null);
@@ -145,7 +149,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         lastKey.current = key;
       }
       if (since) pendingSince.current = since;
-      setSnapshot((s) => ({ draft: d, tracking: since ? { ...s.tracking, since } : s.tracking }));
+      setSnapshot((s) => ({ ...s, draft: d, tracking: since ? { ...s.tracking, since } : s.tracking }));
       window.clearTimeout(draftTimer.current);
       draftTimer.current = window.setTimeout(() => {
         const sinceToSave = pendingSince.current;
@@ -183,6 +187,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [run],
   );
 
+  const addWorkout = useCallback(
+    (w: StoredWorkout) => {
+      setSnapshot((s) => ({ ...s, workouts: [...s.workouts.filter((x) => x.id !== w.id), w] }));
+      run(backend.current.addWorkout(w));
+    },
+    [run],
+  );
+
+  const removeWorkout = useCallback(
+    (id: string) => {
+      setSnapshot((s) => ({ ...s, workouts: s.workouts.filter((x) => x.id !== id) }));
+      run(backend.current.deleteWorkout(id));
+    },
+    [run],
+  );
+
   const signOut = useCallback(async () => {
     await supabase()?.auth.signOut();
   }, []);
@@ -196,16 +216,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       email,
       draft: snapshot.draft,
       tracking: snapshot.tracking,
+      workouts: snapshot.workouts,
       syncError,
       saveDraft,
       addWeighIn,
       removeWeighIn,
       submitCheckin,
+      addWorkout,
+      removeWorkout,
       signOut,
       recoveringPassword,
       doneRecoveringPassword,
     }),
-    [ready, mode, email, snapshot, syncError, saveDraft, addWeighIn, removeWeighIn, submitCheckin, signOut, recoveringPassword, doneRecoveringPassword],
+    [ready, mode, email, snapshot, syncError, saveDraft, addWeighIn, removeWeighIn, submitCheckin, addWorkout, removeWorkout, signOut, recoveringPassword, doneRecoveringPassword],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
