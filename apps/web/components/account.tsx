@@ -5,10 +5,16 @@ import { cloudEnabled, useAppData } from '@/lib/app-data';
 
 /** Sign-in link, or the signed-in account's initial. Hidden when this build has no Supabase project. */
 export function AccountButton() {
-  const { ready, mode, email } = useAppData();
+  const { ready, mode, email, adminRole } = useAppData();
   if (!cloudEnabled || !ready) return null;
   if (mode === 'cloud' && email) {
     return (
+      <>
+      {adminRole ? (
+        <Link href="/admin" className="hidden rounded-lg px-2 py-2 sm:inline-block font-medium text-brand hover:bg-surface-2 sm:px-3">
+          Admin
+        </Link>
+      ) : null}
       <Link
         href="/signin"
         aria-label={`Account: ${email}`}
@@ -17,6 +23,7 @@ export function AccountButton() {
       >
         {email.charAt(0)}
       </Link>
+      </>
     );
   }
   return (

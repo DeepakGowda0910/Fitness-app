@@ -17,6 +17,7 @@ wall behind the API's own checks.
 | `consents` | read and add their own | everything |
 | `audit_logs` | read entries about themselves | writes |
 | `food_sources`, `foods`, `food_nutrients`, `food_portions` | read all (shared reference data) | imports and corrections |
+| `admin_roles` | nothing (only through the admin functions below) | everything |
 | anything | not signed in (`anon`): nothing | |
 
 The API must run user requests through `withUser(db, authUserId, fn)`, which
@@ -26,6 +27,28 @@ account deletion.
 
 `nutrition_targets`, `consents`, `audit_logs` and `checkin_assessments` also
 reject UPDATE through a trigger (`0001_append_only.sql`).
+
+## Admin area
+
+`migrations/0006_admin_access.sql` adds the admin powers behind `/admin` in
+the web app. The site is static and only has the public key, so there is no
+secret key anywhere in the browser: each admin action is a `SECURITY DEFINER`
+function that first checks the caller is an active admin (`admin_roles`), then
+writes `audit_logs`, then acts.
+
+| Function | Who | What |
+| --- | --- | --- |
+| `my_admin_role()` | any signed-in user | their own role, or null |
+| `admin_list_users()` | admin | email, status, role, joined, last sign-in, onboarding stage, check-in count. No names, measurements or health answers |
+| `admin_set_user_status(id, 'suspended' \| 'active')` | admin | suspends (bans sign-in in `auth.users`; RLS also stops data access) or reactivates |
+| `admin_delete_user(id, email)` | super admin | erases the account and all data, after the email is typed to confirm. The audit row keeps only the random id |
+| `admin_recent_actions(n)` | admin | latest admin actions |
+| `grant_admin_role(email, role \| null)` | SQL editor only | make or remove an admin |
+
+Admin accounts (including your own) can't be suspended or deleted from the
+app. Users cannot change their own `status` (trigger `users_guard_status`),
+and `app_user_id()` returns nothing for suspended users, so every
+owner-only policy stops matching.
 
 ## Testing
 
@@ -48,3 +71,8 @@ Regenerate it after adding a migration with
 of date). It also grants table access to signed-in users (`authenticated`)
 and removes it from signed-out visitors (`anon`); row-level security then
 limits each user to their own rows.
+
+A project that already ran an older `setup.sql` runs the matching update
+script instead, once: `supabase/update-1-admin.sql` adds the admin area
+(migrations 0005 and 0006). The same script generates both, and a test checks
+that the update brings an old project to the same state.
