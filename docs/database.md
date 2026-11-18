@@ -74,5 +74,7 @@ limits each user to their own rows.
 
 A project that already ran an older `setup.sql` runs the matching update
 script instead, once: `supabase/update-1-admin.sql` adds the admin area
-(migrations 0005 and 0006). The same script generates both, and a test checks
+(migrations 0005 and 0006), and `supabase/update-2-workouts.sql` adds the
+`workout_sessions` table with its row-level security (0007 and 0008). Run them
+in order. The same script generates both, and a test checks
 that the update brings an old project to the same state.

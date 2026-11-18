@@ -50,6 +50,20 @@
       "when": 1795013106212,
       "tag": "0006_admin_access",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795021170724,
+      "tag": "0007_workouts",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795021171442,
+      "tag": "0008_workouts_rls",
+      "breakpoints": true
     }
   ]
 }

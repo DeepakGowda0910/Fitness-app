@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AssessmentDraft, StepId } from './assessment';
 import { EPOCH, type Backend, type Snapshot } from './backend';
 import type { StoredCheckin, StoredWeighIn } from './checkins';
+import type { LoggedExercise, StoredWorkout } from './workouts';
 
 /** Which assessment step each answer belongs to, for the `section` column. */
 const SECTION: Record<keyof AssessmentDraft, StepId> = {
@@ -17,6 +18,7 @@ const SECTION: Record<keyof AssessmentDraft, StepId> = {
   trainingDaysPerWeek: 'activity',
   sessionMinutes: 'activity',
   experience: 'activity',
+  equipment: 'activity',
   goal: 'goal',
   weeklyRatePct: 'goal',
   pregnant: 'health',
@@ -34,6 +36,14 @@ const KNOWN_KEYS = new Set(Object.keys(SECTION));
 const measuredAtOf = (date: string) => `${date}T12:00:00.000Z`;
 
 export const SUSPENDED_MESSAGE = 'This account has been suspended, so nothing is saved to it. Contact the app owner if you think this is a mistake.';
+
+/** Shown when the database has not had update-2-workouts.sql run yet. */
+export const WORKOUTS_NOT_SET_UP = 'Workouts can’t be saved to your account yet: the database needs its workouts update (update-2-workouts.sql).';
+
+/** True when the table does not exist (the update script hasn't been run). */
+function missingTable(error: { code?: string; message: string } | null): boolean {
+  return !!error && (error.code === '42P01' || error.code === 'PGRST205' || (/workout_sessions/.test(error.message) && /not find|does not exist/i.test(error.message)));
+}
 
 function check<T>(res: { data: T; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`Could not ${what}: ${res.error.message}`);
@@ -130,8 +140,37 @@ export async function cloudBackend(db: SupabaseClient, authUserId: string, email
         sleep_quality: number;
         cycle_phase: string | null;
       }>;
+      const sessions = await db
+        .from('workout_sessions')
+        .select('id, performed_on, day_key, day_name, planner_version, duration_min, effort, exercises, notes, completed_at')
+        .order('performed_on');
+      if (sessions.error && !missingTable(sessions.error)) throw new Error(`Could not load your workouts: ${sessions.error.message}`);
+      const workoutRows = (sessions.error ? [] : sessions.data) as Array<{
+        id: string;
+        performed_on: string;
+        day_key: string;
+        day_name: string;
+        planner_version: string;
+        duration_min: number | null;
+        effort: number | null;
+        exercises: LoggedExercise[];
+        notes: string | null;
+        completed_at: string;
+      }>;
       return {
         draft,
+        workouts: workoutRows.map((r) => ({
+          id: r.id,
+          date: r.performed_on,
+          dayKey: r.day_key,
+          dayName: r.day_name,
+          plannerVersion: r.planner_version,
+          durationMin: r.duration_min ?? undefined,
+          effort: r.effort ?? undefined,
+          exercises: r.exercises,
+          notes: r.notes ?? undefined,
+          completedAt: new Date(r.completed_at).toISOString(),
+        })),
         tracking: {
           since: a?.completed_at ? new Date(a.completed_at).toISOString() : EPOCH,
           weighIns: weights.map((w) => ({
@@ -217,11 +256,36 @@ export async function cloudBackend(db: SupabaseClient, authUserId: string, email
       );
     },
 
+    async addWorkout(w: StoredWorkout) {
+      const res = await db.from('workout_sessions').upsert({
+        id: w.id,
+        user_id: userId,
+        performed_on: w.date,
+        day_key: w.dayKey,
+        day_name: w.dayName,
+        planner_version: w.plannerVersion,
+        duration_min: w.durationMin ?? null,
+        effort: w.effort ?? null,
+        exercises: w.exercises,
+        notes: w.notes ?? null,
+        completed_at: w.completedAt,
+      });
+      if (missingTable(res.error)) throw new Error(WORKOUTS_NOT_SET_UP);
+      check(res, 'save your workout');
+    },
+
+    async deleteWorkout(id: string) {
+      const res = await db.from('workout_sessions').delete().eq('id', id);
+      if (missingTable(res.error)) throw new Error(WORKOUTS_NOT_SET_UP);
+      check(res, 'remove the workout');
+    },
+
     async importAll(s) {
       if (Object.keys(s.draft).length > 0) await backend.saveDraft(s.draft, s.tracking.since === EPOCH ? undefined : s.tracking.since);
       for (const w of s.tracking.weighIns) await backend.putWeighIn(w.date, w.weightKg, w.recordedAt);
       let n = 0;
       for (const c of s.tracking.checkins) await backend.addCheckin(c, ++n);
+      for (const w of s.workouts) await backend.addWorkout(w);
     },
   };
   return backend;

@@ -16,6 +16,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 const FEATURES = [
   { title: 'Targets from proven formulas', body: 'Calories, protein, carbs, fat, fibre and water from standard equations. No guesswork.' },
   { title: 'Indian meals', body: 'Diet plans built from Indian foods and the IFCT 2017 nutrition tables, for veg, egg, non-veg and Jain diets.' },
+  { title: 'Workouts that progress', body: 'A weekly plan for the gym, dumbbells at home or no equipment. Log your sets and it tells you when to add weight.' },
   { title: 'Adjusts every week', body: 'Weekly check-ins compare your weight trend with your goal and change the targets only when needed.' },
   { title: 'Safety first', body: 'Health questions decide when we won’t suggest eating less, and when to check with your doctor.' },
 ];
@@ -66,7 +67,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((f) => (
           <div key={f.title} className="rounded-2xl border border-border bg-surface p-5">
             <h2 className="font-semibold">{f.title}</h2>

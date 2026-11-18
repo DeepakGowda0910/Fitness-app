@@ -21,6 +21,7 @@ const journal = JSON.parse(readFileSync(join(root, 'migrations/meta/_journal.jso
 /** Update scripts for existing projects: file name → the migrations it adds. */
 const UPDATES = {
   'update-1-admin.sql': ['0005_admin_roles', '0006_admin_access'],
+  'update-2-workouts.sql': ['0007_workouts', '0008_workouts_rls'],
 };
 
 function migrationSql(entry) {

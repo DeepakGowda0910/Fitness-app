@@ -13,6 +13,7 @@ follow the device setting.
 | `/assessment` | Six steps: about you, activity, goal, health check, food, review. Resumes at the first unanswered step |
 | `/results` | Calories, macros, fibre, water, maintenance and resting energy, safety notices, and how each number was worked out |
 | `/plan` | 7-day Indian diet plan sized to the targets: day tabs, meals with raw-ingredient grams and household units, day totals against targets, "Swap this dish" and "Shuffle dishes" |
+| `/workouts` | Weekly workout plan from `@fitness/workout-planner`, matched to training days, session length, experience, goal and where the user trains (gym, dumbbells at home, no equipment). Day tabs with the next day marked, each exercise's sets, reps, rest, form cues, last time and what to aim for (double progression). "Start this workout" opens a logger with weight/reps per set, a rest timer and an effort rating; an unfinished workout survives a reload. Workout history with remove |
 | `/checkin` | Log weigh-ins (with a smoothed trend chart) and a weekly check-in: days followed, adherence, hunger, energy, sleep. The engine decides whether calories change; the new targets flow to `/results` and `/plan`. One check-in per week; protein never changes |
 
 Targets, check-in decisions and the diet plan are always calculated in the browser by `@fitness/calc-engine` and `@fitness/meal-planner`, the same
@@ -43,6 +44,7 @@ account. What is stored:
 | Assessment answers | `assessments`, `assessment_answers` (one row per answer) |
 | Weigh-ins | `body_measurements` (type `weight`, `created_at` = when recorded) |
 | Weekly check-ins | `weekly_checkins` |
+| Workouts | `workout_sessions` (one row per workout, sets as JSON). Needs `packages/db/supabase/update-2-workouts.sql` on projects set up before it |
 
 Targets and check-in decisions are not stored by the browser (those tables
 are written only by the server). Instead `replay()` in `lib/checkins.ts`

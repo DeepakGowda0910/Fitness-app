@@ -155,6 +155,8 @@ describe('supabase/update-1-admin.sql', () => {
     await client.exec(SUPABASE_TEST_SHIM_SQL);
     await client.exec(before);
     await client.exec(update);
+    // Later updates, in order, so Drizzle has nothing newer to apply.
+    await client.exec(readFileSync(new URL('../supabase/update-2-workouts.sql', import.meta.url), 'utf8'));
     const count = async () => (await client.query<{ n: number }>('select count(*)::int as n from drizzle.__drizzle_migrations')).rows[0]!.n;
     const n = await count();
     await migrate(drizzle(client), { migrationsFolder });

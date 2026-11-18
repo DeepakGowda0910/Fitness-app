@@ -399,6 +399,40 @@ export const checkinAssessments = pgTable('checkin_assessments', {
   createdAt: createdAt(),
 });
 
+// ---------- Workouts ----------
+
+/**
+ * One finished workout. The exercises and sets are kept together as JSON
+ * (`[{ exerciseId, name, sets: [{ weightKg, reps }] }]`) because they are
+ * always read and written as a whole; exercise ids come from
+ * `@fitness/workout-planner`.
+ */
+export const workoutSessions = pgTable(
+  'workout_sessions',
+  {
+    id: uuid('id').primaryKey(),
+    userId: userId(),
+    performedOn: date('performed_on').notNull(),
+    /** The program day it followed, e.g. `upper_a`. */
+    dayKey: text('day_key').notNull(),
+    dayName: text('day_name').notNull(),
+    plannerVersion: text('planner_version').notNull(),
+    durationMin: smallint('duration_min'),
+    /** How hard the whole session felt, 1 (easy) to 5 (all-out). */
+    effort: smallint('effort'),
+    exercises: jsonb('exercises').notNull(),
+    notes: text('notes'),
+    completedAt: timestamp('completed_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('workout_sessions_user_date_idx').on(t.userId, t.performedOn),
+    check('effort_range', sql`coalesce(${t.effort}, 1) between 1 and 5`),
+    check('duration_range', sql`coalesce(${t.durationMin}, 1) between 1 and 600`),
+    check('exercises_is_array', sql`jsonb_typeof(${t.exercises}) = 'array'`),
+  ],
+);
+
 // ---------- Food reference data ----------
 
 export const foodSourceCode = pgEnum('food_source_code', ['IFCT_2017', 'USDA_FDC', 'OFF', 'CUSTOM']);

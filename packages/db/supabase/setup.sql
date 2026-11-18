@@ -663,6 +663,37 @@ GRANT EXECUTE ON FUNCTION public.my_admin_role(), public.admin_list_users(), pub
   public.admin_delete_user(uuid, text), public.admin_recent_actions(integer) TO authenticated;
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('b99d046f159fabd0c95cf6781a97f1f75b814e3696255c5bca206913e5ee226b', 1795013106212);
 
+-- ===== 0007_workouts =====
+CREATE TABLE "workout_sessions" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"user_id" uuid NOT NULL,
+	"performed_on" date NOT NULL,
+	"day_key" text NOT NULL,
+	"day_name" text NOT NULL,
+	"planner_version" text NOT NULL,
+	"duration_min" smallint,
+	"effort" smallint,
+	"exercises" jsonb NOT NULL,
+	"notes" text,
+	"completed_at" timestamp with time zone NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "effort_range" CHECK (coalesce("workout_sessions"."effort", 1) between 1 and 5),
+	CONSTRAINT "duration_range" CHECK (coalesce("workout_sessions"."duration_min", 1) between 1 and 600),
+	CONSTRAINT "exercises_is_array" CHECK (jsonb_typeof("workout_sessions"."exercises") = 'array')
+);
+
+ALTER TABLE "workout_sessions" ADD CONSTRAINT "workout_sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+CREATE INDEX "workout_sessions_user_date_idx" ON "workout_sessions" USING btree ("user_id","performed_on");
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('eab1d5b7d383b6f00de8844c9f4da18e52d8619b2febd1a10fbc285c61fde74d', 1795021170724);
+
+-- ===== 0008_workouts_rls =====
+-- Workouts belong to their user: they can read, add and remove their own,
+-- and nobody else's. Suspended users lose access (app_user_id() is null).
+ALTER TABLE workout_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY workout_sessions_owner ON workout_sessions FOR ALL TO authenticated USING (user_id = public.app_user_id()) WITH CHECK (user_id = public.app_user_id());
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('affbc2f60fe7aa5e1f246ad03a2779c514792d2077bb4740a58b989313876a55', 1795021171442);
+
 -- ===== Access for signed-in users =====
 -- Row-level security (above) decides which rows each user can see or change.
 -- Nothing in this app is meant for signed-out visitors, so they get no table access at all.
