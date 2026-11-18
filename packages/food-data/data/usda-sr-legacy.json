@@ -1,0 +1,39 @@
+{
+ "source": "USDA_FDC",
+ "version": "SR Legacy (2019-04-01)",
+ "note": "Selected foods missing from IFCT 2017. Values per 100 g from USDA FoodData Central (public domain). carbsG = carbohydrate by difference minus fibre, to match IFCT's available carbohydrate. sugarsG 0 where USDA gives no value.",
+ "foods": [
+  {
+   "code": "USDA:171284",
+   "name": "Curd (dahi), plain, whole milk",
+   "localNames": ["Dahi", "Curd", "Thayir", "Mosaru", "Perugu", "Doi", "Yogurt"],
+   "group": "Milk and Milk Products",
+   "diet": { "vegetarian": true, "eggetarian": true, "pescatarian": true },
+   "per100g": { "energyKcalPublished": 61, "proteinG": 3.47, "fatG": 3.25, "carbsG": 4.66, "fibreG": 0, "sugarsG": 4.66, "waterG": 87.9, "calciumMg": 121, "ironMg": 0.05, "sodiumMg": 46, "potassiumMg": 155 }
+  },
+  {
+   "code": "USDA:170886",
+   "name": "Curd (dahi), plain, low fat",
+   "localNames": ["Low fat dahi", "Low fat curd", "Yogurt"],
+   "group": "Milk and Milk Products",
+   "diet": { "vegetarian": true, "eggetarian": true, "pescatarian": true },
+   "per100g": { "energyKcalPublished": 63, "proteinG": 5.25, "fatG": 1.55, "carbsG": 7.04, "fibreG": 0, "sugarsG": 7.04, "waterG": 85.1, "calciumMg": 183, "ironMg": 0.08, "sodiumMg": 70, "potassiumMg": 234 }
+  },
+  {
+   "code": "USDA:172475",
+   "name": "Tofu, firm (calcium set)",
+   "localNames": ["Tofu", "Soya paneer"],
+   "group": "Grain Legumes",
+   "diet": { "vegetarian": true, "eggetarian": true, "pescatarian": true },
+   "per100g": { "energyKcalPublished": 144, "proteinG": 17.3, "fatG": 8.72, "carbsG": 0.48, "fibreG": 2.3, "sugarsG": 0, "waterG": 69.8, "calciumMg": 683, "ironMg": 2.66, "sodiumMg": 14, "potassiumMg": 237 }
+  },
+  {
+   "code": "USDA:174275",
+   "name": "Soya chunks (defatted soy flour)",
+   "localNames": ["Soya chunks", "Soya badi", "Meal maker"],
+   "group": "Grain Legumes",
+   "diet": { "vegetarian": true, "eggetarian": true, "pescatarian": true },
+   "per100g": { "energyKcalPublished": 327, "proteinG": 51.5, "fatG": 1.22, "carbsG": 16.4, "fibreG": 17.5, "sugarsG": 16.4, "waterG": 7.25, "calciumMg": 241, "ironMg": 9.24, "sodiumMg": 20, "potassiumMg": 2380 }
+  }
+ ]
+}

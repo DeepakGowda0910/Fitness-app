@@ -16,8 +16,19 @@ const DIET_LEVEL_ALLOWED: Record<DietType, DietLevel> = {
   non_vegetarian: 4,
 };
 
+/** USDA supplement foods, classified explicitly (their codes carry no IFCT group). */
+const USDA_FOODS: Record<string, { level: DietLevel; allergens: Allergen[] }> = {
+  'USDA:171284': { level: 1, allergens: ['dairy'] }, // curd, whole milk
+  'USDA:170886': { level: 1, allergens: ['dairy'] }, // curd, low fat
+  'USDA:172475': { level: 0, allergens: ['soy'] }, // tofu
+  'USDA:174275': { level: 0, allergens: ['soy'] }, // soya chunks
+};
+
 /** IFCT group letter: N/O meat, P/Q/R/S fish and seafood, M egg, L milk products. */
 export function dietLevel(code: string): DietLevel {
+  const usda = USDA_FOODS[code];
+  if (usda) return usda.level;
+  if (code.startsWith('USDA:')) throw new Error(`Unclassified USDA food ${code}`);
   const group = code[0];
   if (group === 'N' || group === 'O') return 4;
   if (group === 'P' || group === 'Q' || group === 'R' || group === 'S') return 3;
@@ -46,6 +57,8 @@ const ALLERGENS_BY_CODE: Record<string, Allergen[]> = {
 };
 
 export function allergensOf(code: string): Allergen[] {
+  const usda = USDA_FOODS[code];
+  if (usda) return [...usda.allergens];
   const group = code[0];
   const out = new Set<Allergen>(ALLERGENS_BY_CODE[code] ?? []);
   if (group === 'L' || code === 'T013') out.add('dairy');

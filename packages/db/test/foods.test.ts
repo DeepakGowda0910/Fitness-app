@@ -1,7 +1,7 @@
-import { ifct2017 } from '@fitness/food-data';
+import { ifct2017, usdaSupplement } from '@fitness/food-data';
 import { and, eq, sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { schema, seedIfct2017, withUser } from '../src/index.js';
+import { schema, seedIfct2017, seedReferenceFoods, USDA_FDC_SOURCE, withUser } from '../src/index.js';
 import { freshDb, pgErrorCode, type Db } from './helpers.js';
 
 const { foods, foodNutrients, foodSources, users } = schema;
@@ -36,7 +36,13 @@ describe('food reference data', () => {
     await seedIfct2017(db, ifct2017());
     const [{ n }] = (await db.select({ n: sql<number>`count(*)::int` }).from(foods)) as [{ n: number }];
     expect(n).toBe(542);
-    expect(await db.select().from(foodSources)).toHaveLength(1);
+    expect(await db.select().from(foodSources).where(eq(foodSources.code, 'IFCT_2017'))).toHaveLength(1);
+  }, 60_000);
+
+  it('imports the USDA supplement as a separate source', async () => {
+    await seedReferenceFoods(db, USDA_FDC_SOURCE, usdaSupplement());
+    const rows = await db.select().from(foods).innerJoin(foodSources, eq(foodSources.id, foods.sourceId)).where(eq(foodSources.code, 'USDA_FDC'));
+    expect(rows.map((r) => r.foods.externalId).sort()).toEqual(['USDA:170886', 'USDA:171284', 'USDA:172475', 'USDA:174275']);
   }, 60_000);
 
   it('signed-in users can read foods but not change them', async () => {

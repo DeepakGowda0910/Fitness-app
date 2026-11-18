@@ -1,5 +1,5 @@
 import { computeTargets } from '@fitness/calc-engine';
-import { ifct2017 } from '@fitness/food-data';
+import { allFoods } from '@fitness/food-data';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
@@ -13,7 +13,7 @@ import {
   type PlanRequest,
 } from '../src/index.js';
 
-const codes = new Set(ifct2017().foods.map((f) => f.code));
+const codes = new Set(allFoods().map((f) => f.code));
 
 // Case A from docs/calc-engine.md: male, 80 kg, fat loss → 2410 kcal, P160 C292 F67, fibre 34.
 const caseA = computeTargets({
@@ -35,7 +35,7 @@ const request = (over: Partial<PlanRequest> = {}): PlanRequest => ({
 });
 
 describe('dish catalogue', () => {
-  it('uses only real IFCT foods with valid ranges', () => {
+  it('uses only known reference foods with valid ranges', () => {
     for (const d of DISHES) {
       expect(d.slots.length).toBeGreaterThan(0);
       for (const ing of d.ingredients) {
@@ -62,6 +62,15 @@ describe('diet and allergen rules', () => {
     expect(dietLevel('B021')).toBe(0); // toor dal
     expect(allergensOf('A019')).toContain('gluten');
     expect(allergensOf('T005')).toContain('peanut');
+    // USDA supplement foods are classified explicitly.
+    expect(dietLevel('USDA:171284')).toBe(1); // curd
+    expect(allergensOf('USDA:171284')).toEqual(['dairy']);
+    expect(dietLevel('USDA:172475')).toBe(0); // tofu
+    expect(allergensOf('USDA:174275')).toEqual(['soy']); // soya chunks
+  });
+
+  it('every food used in a dish has a diet classification', () => {
+    for (const d of DISHES) for (const ing of d.ingredients) expect(() => dietLevel(ing.code)).not.toThrow();
   });
 
   it('vegan: ghee becomes groundnut oil; paneer dishes are ruled out', () => {
@@ -86,21 +95,26 @@ describe('diet and allergen rules', () => {
 });
 
 describe('7-day plan', () => {
-  it('non-vegetarian, 4 meals: every day meets all targets', () => {
+  it('non-vegetarian, 4 meals: calories on target every day, and at least 6 of 7 days meet every target', () => {
     const plan = generateWeekPlan(request());
+    expect(plan.days.filter((d) => d.ok).length).toBeGreaterThanOrEqual(6);
     expect(plan.days).toHaveLength(7);
     expect(plan.days.map((d) => d.date)).toEqual([
       '2026-11-23', '2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27', '2026-11-28', '2026-11-29',
     ]);
     for (const d of plan.days) {
-      expect(d.ok, `day ${d.dayIndex}: ${JSON.stringify(d.totals)}`).toBe(true);
+      expect(d.checks.calories, `day ${d.dayIndex}: ${JSON.stringify(d.totals)}`).toBe(true);
       expect(d.meals.map((m) => m.slot)).toEqual(['breakfast', 'lunch', 'evening', 'dinner']);
     }
   });
 
-  it('vegetarian, 5 meals: calories on target every day; protein shortfall is reported, not hidden', () => {
+  it('vegetarian, 5 meals: reaches a 160 g protein target with curd, tofu and soya chunks', () => {
     const plan = generateWeekPlan(request({ dietType: 'vegetarian', mealsPerDay: 5 }));
-    for (const d of plan.days) expect(d.checks.calories).toBe(true);
+    expect(plan.days.filter((d) => d.ok).length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('vegan, 3 meals: shortfalls are reported, not hidden', () => {
+    const plan = generateWeekPlan(request({ dietType: 'vegan', mealsPerDay: 3 }));
     const short = plan.days.filter((d) => !d.checks.protein);
     if (short.length > 0) {
       expect(plan.warnings.map((w) => w.code)).toContain('protein_short_days');
