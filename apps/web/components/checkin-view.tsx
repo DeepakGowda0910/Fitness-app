@@ -1,17 +1,11 @@
 'use client';
 
-import { trendWeights, type CheckinAssessment, type DayTargets, type NutritionTargets, type WeighIn } from '@fitness/calc-engine';
+import { trendWeights, type CheckinAssessment, type DayTargets, type WeighIn } from '@fitness/calc-engine';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AssessmentDraft } from '@/lib/assessment';
-import {
-  addWeighIn,
-  nextCheckinDate,
-  removeWeighIn,
-  runCheckin,
-  type CheckinState,
-  type WeekAnswers,
-} from '@/lib/checkins';
+import { useAppData } from '@/lib/app-data';
+import { activeCheckins, nextCheckinDate, type CheckinResult, type StoredWeighIn, type TrackingData, type WeekAnswers } from '@/lib/checkins';
 import { localToday } from '@/lib/plan';
 import { useTargets } from '@/lib/targets';
 import { ChoiceGroup, Fieldset, Notice, NumberField, YesNo } from './fields';
@@ -24,24 +18,20 @@ export function CheckinView() {
   const state = useTargets();
   if (state.status === 'loading') return <div className="h-[32rem] animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
   if (state.status === 'incomplete') return <NoTargets started={Object.keys(state.draft).length > 0} />;
-  return <Checkins base={state.targets} active={state.active} draft={state.draft} state={state.checkins} save={state.saveCheckins} />;
+  return <Checkins active={state.active} draft={state.draft} results={state.results} />;
 }
 
-function Checkins({
-  base,
-  active,
-  draft,
-  state,
-  save,
-}: {
-  base: NutritionTargets;
-  active: DayTargets;
-  draft: AssessmentDraft;
-  state: CheckinState;
-  save: (s: CheckinState) => void;
-}) {
+function Checkins({ active, draft, results }: { active: DayTargets; draft: AssessmentDraft; results: CheckinResult[] }) {
+  const { tracking, submitCheckin } = useAppData();
   const today = localToday();
-  const [latest, setLatest] = useState<CheckinAssessment | null>(null);
+  // Show the result of a check-in submitted on this visit.
+  const [showFor, setShowFor] = useState<string | null>(null);
+  const shown = showFor ? results.find((r) => r.checkin.submittedAt === showFor) : undefined;
+  const count = useRef(results.length);
+  useEffect(() => {
+    if (results.length > count.current) setShowFor(results.at(-1)!.checkin.submittedAt);
+    count.current = results.length;
+  }, [results]);
 
   return (
     <div className="space-y-6">
@@ -57,38 +47,37 @@ function Checkins({
         </Link>
       </div>
 
-      {latest ? <ResultCard a={latest} onClose={() => setLatest(null)} /> : null}
+      {shown ? <ResultCard a={shown.assessment} onClose={() => setShowFor(null)} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-        <WeightCard state={state} save={save} today={today} />
+        <WeightCard today={today} />
         <WeekForm
-          state={state}
+          tracking={tracking}
           showCycle={draft.sex === 'female'}
           today={today}
           onSubmit={(answers, cycleAware) => {
-            const result = runCheckin({ ...state, cycleAware }, base, answers, today);
-            save(result.state);
-            setLatest(result.assessment);
+            submitCheckin(answers, today, cycleAware);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
         />
       </div>
 
-      <History state={state} />
+      <History results={results} />
 
       <p className="text-xs text-muted">
         Check-ins compare the trend of your weigh-ins with your goal, and change calories by 50 to 150 kcal at most, only after a week you
-        mostly stuck to the plan. Protein never changes. Your data stays in this browser for now.
+        mostly stuck to the plan. Protein never changes.
       </p>
     </div>
   );
 }
 
-function WeightCard({ state, save, today }: { state: CheckinState; save: (s: CheckinState) => void; today: string }) {
+function WeightCard({ today }: { today: string }) {
+  const { tracking, addWeighIn, removeWeighIn } = useAppData();
   const [date, setDate] = useState(today);
   const [kg, setKg] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | undefined>();
-  const recent = state.weighIns.slice(-60);
+  const recent: StoredWeighIn[] = tracking.weighIns.slice(-60);
 
   return (
     <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
@@ -101,7 +90,7 @@ function WeightCard({ state, save, today }: { state: CheckinState; save: (s: Che
           if (kg === undefined || kg < 30 || kg > 300) return setError('Enter a weight between 30 and 300 kg.');
           if (!date || date > today) return setError('Choose today or an earlier date.');
           setError(undefined);
-          save(addWeighIn(state, { date, weightKg: Math.round(kg * 10) / 10 }));
+          addWeighIn(date, Math.round(kg * 10) / 10);
           setKg(undefined);
         }}
       >
@@ -136,7 +125,7 @@ function WeightCard({ state, save, today }: { state: CheckinState; save: (s: Che
                   <span className="font-medium">{w.weightKg.toFixed(1)} kg</span>
                   <button
                     type="button"
-                    onClick={() => save(removeWeighIn(state, w.date))}
+                    onClick={() => removeWeighIn(w.date)}
                     className="rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-text"
                     aria-label={`Remove weigh-in on ${fmtDate(w.date)}`}
                   >
@@ -203,20 +192,20 @@ const ENERGY = scale(['Very low', 'Low', 'Normal', 'Good', 'Very good']);
 const SLEEP = scale(['Very poor', 'Poor', 'OK', 'Good', 'Very good']);
 
 function WeekForm({
-  state,
+  tracking,
   showCycle,
   today,
   onSubmit,
 }: {
-  state: CheckinState;
+  tracking: TrackingData;
   showCycle: boolean;
   today: string;
   onSubmit: (a: WeekAnswers, cycleAware: boolean) => void;
 }) {
   const [a, setA] = useState<Partial<WeekAnswers>>({});
-  const [cycleAware, setCycleAware] = useState(state.cycleAware);
+  const [cycleAware, setCycleAware] = useState(activeCheckins(tracking).at(-1)?.cycleAware ?? false);
   const [tried, setTried] = useState(false);
-  const due = nextCheckinDate(state, today);
+  const due = nextCheckinDate(tracking, today);
 
   if (due) {
     return (
@@ -230,7 +219,7 @@ function WeekForm({
   }
 
   const missing = (k: keyof WeekAnswers) => (tried && a[k] === undefined ? 'Choose one.' : undefined);
-  const hasWeighIns = state.weighIns.length >= 2;
+  const hasWeighIns = tracking.weighIns.length >= 2;
 
   return (
     <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
@@ -395,23 +384,20 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function History({ state }: { state: CheckinState }) {
-  if (state.results.length === 0) return null;
+function History({ results }: { results: CheckinResult[] }) {
+  if (results.length === 0) return null;
   return (
     <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
       <h2 className="text-lg font-semibold">Past check-ins</h2>
       <ul className="mt-3 divide-y divide-border">
-        {state.results
-          .map((r, i) => ({ ...r, week: state.weeks[i]! }))
-          .reverse()
-          .map(({ assessment: a, targetsAfter, week }) => (
-            <li key={week.weekEnd} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm">
-              <span className="w-20 shrink-0 text-muted">{fmtDate(week.weekEnd)}</span>
-              <span className="min-w-0 flex-1 font-medium">{DECISION_TITLE[a.decision](a)}</span>
-              <span className="text-muted">{STATUS_LABEL[a.status]}</span>
-              <span className="w-24 text-right font-semibold">{fmt(targetsAfter.calories)} kcal</span>
-            </li>
-          ))}
+        {[...results].reverse().map(({ assessment: a, targetsAfter, checkin }) => (
+          <li key={checkin.submittedAt} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm">
+            <span className="w-20 shrink-0 text-muted">{fmtDate(checkin.weekEnd)}</span>
+            <span className="min-w-0 flex-1 font-medium">{DECISION_TITLE[a.decision](a)}</span>
+            <span className="text-muted">{STATUS_LABEL[a.status]}</span>
+            <span className="w-24 text-right font-semibold">{fmt(targetsAfter.calories)} kcal</span>
+          </li>
+        ))}
       </ul>
     </section>
   );

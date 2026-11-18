@@ -3,6 +3,7 @@
 import type { DayTargets, NutritionTargets } from '@fitness/calc-engine';
 import Link from 'next/link';
 import { GOALS, labelOf } from '@/lib/labels';
+import { cloudEnabled, useAppData } from '@/lib/app-data';
 import { useTargets } from '@/lib/targets';
 import { Notice } from './fields';
 
@@ -167,9 +168,7 @@ function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTarg
         </section>
       </div>
 
-      <p className="text-xs text-muted">
-        Your answers are saved only in this browser for now. Saving to an account comes once sign-in is set up.
-      </p>
+      <SavedWhere />
     </div>
   );
 }
@@ -197,5 +196,26 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
       <p className="mt-1 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{note}</p>
     </section>
+  );
+}
+
+function SavedWhere() {
+  const { mode, email } = useAppData();
+  return (
+    <p className="text-xs text-muted">
+      {mode === 'cloud' && email ? (
+        <>Saved to your account ({email}).</>
+      ) : cloudEnabled ? (
+        <>
+          Saved in this browser only.{' '}
+          <Link href="/signin" className="font-medium text-brand underline">
+            Sign in
+          </Link>{' '}
+          to keep it in your account and use it on other devices.
+        </>
+      ) : (
+        <>Saved in this browser only.</>
+      )}
+    </p>
   );
 }

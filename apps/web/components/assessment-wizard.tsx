@@ -22,12 +22,12 @@ import {
   labelOf,
   OCCUPATIONS,
 } from '@/lib/labels';
-import { useAssessmentDraft } from '@/lib/storage';
+import { useAppData } from '@/lib/app-data';
 import { CheckGroup, ChoiceGroup, Fieldset, Notice, NumberField, YesNo } from './fields';
 
 export function AssessmentWizard() {
   const router = useRouter();
-  const { draft, ready, update } = useAssessmentDraft();
+  const { draft, ready, saveDraft: update } = useAppData();
   const [step, setStep] = useState<StepId>('body');
   const [showErrors, setShowErrors] = useState(false);
   const [started, setStarted] = useState(false);
