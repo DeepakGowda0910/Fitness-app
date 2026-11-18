@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cloudEnabled, useAppData } from '@/lib/app-data';
+import { takeReturnPath } from '@/lib/return-path';
 import { friendlyAuthError, googleSignInEnabled, signInRedirectUrl, supabase } from '@/lib/supabase';
 import { Notice } from './fields';
 
@@ -47,6 +49,13 @@ export function SignInView() {
   const [linkError, setLinkError] = useState<string | null>(null);
   useEffect(() => setLinkError(linkErrorFromUrl()), []);
   const [changingPassword, setChangingPassword] = useState(false);
+  const router = useRouter();
+  // Came here from Google or an emailed link after trying to open a page: go back to it.
+  useEffect(() => {
+    if (!email || recoveringPassword) return;
+    const back = takeReturnPath();
+    if (back) router.replace(back);
+  }, [email, recoveringPassword, router]);
   const saving = mode === 'cloud' ? 'are saved to your account, so they\'re on every device you sign in on.' : 'are kept in this browser until your account loads. Reload the page to try again.';
 
   if (!cloudEnabled) {
@@ -110,8 +119,12 @@ const primaryButton = 'h-12 w-full rounded-xl bg-brand px-6 font-semibold text-o
 const linkButton = 'text-sm font-medium text-brand hover:underline';
 const MIN_PASSWORD = 8;
 
-function SignedOutForm({ linkError }: { linkError: string | null }) {
-  const [mode, setMode] = useState<Mode>('signin');
+/**
+ * Sign in, create an account, reset a password or ask for an emailed link.
+ * `gated` is set when it stands in for a page that needs an account.
+ */
+export function SignedOutForm({ linkError, initialMode = 'signin', gated = false }: { linkError: string | null; initialMode?: Mode; gated?: boolean }) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -212,10 +225,13 @@ function SignedOutForm({ linkError }: { linkError: string | null }) {
     // Otherwise the browser is on its way to Google.
   };
 
-  const title = { signin: 'Sign in', signup: 'Create your account', forgot: 'Reset your password', link: 'Sign in with an email link' }[mode];
+  const title = { signin: gated ? 'Sign in to continue' : 'Sign in', signup: gated ? 'Create your free account' : 'Create your account', forgot: 'Reset your password', link: 'Sign in with an email link' }[mode];
+  const accountIntro = gated
+    ? "Sign up to get your targets, diet plan, workouts and weekly check-ins. It's free, and everything is saved to your account so you can use it on your phone and laptop."
+    : null;
   const intro = {
-    signin: 'Save your answers, weigh-ins and check-ins to your account, and use them on your phone and laptop.',
-    signup: 'Save your answers, weigh-ins and check-ins to your account, and use them on your phone and laptop.',
+    signin: accountIntro ?? 'Save your answers, weigh-ins and check-ins to your account, and use them on your phone and laptop.',
+    signup: accountIntro ?? 'Save your answers, weigh-ins and check-ins to your account, and use them on your phone and laptop.',
     forgot: "Enter your email and we'll send you a link to choose a new password. This also works if you've never set one.",
     link: "No password needed: we'll email you a link that signs you in.",
   }[mode];
@@ -327,10 +343,12 @@ function SignedOutForm({ linkError }: { linkError: string | null }) {
         )}
       </div>
 
-      <p className="mt-5 text-xs text-muted">
-        Anything you've already entered on this device moves into your account the first time you sign in.
-      </p>
-      <p className="mt-2 text-xs text-muted">
+      {gated ? null : (
+        <p className="mt-5 text-xs text-muted">
+          Anything you've already entered on this device moves into your account the first time you sign in.
+        </p>
+      )}
+      <p className={`${gated ? 'mt-5' : 'mt-2'} text-xs text-muted`}>
         Signed in on your phone already? Each browser signs in on its own, so sign in here too to see the same data on this device.
       </p>
     </Card>
