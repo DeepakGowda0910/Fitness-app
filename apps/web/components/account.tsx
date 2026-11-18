@@ -5,9 +5,10 @@ import { cloudEnabled, useAppData } from '@/lib/app-data';
 
 /** Sign-in link, or the signed-in account's initial. Hidden when this build has no Supabase project. */
 export function AccountButton() {
-  const { ready, mode, email, adminRole } = useAppData();
+  const { ready, email, adminRole } = useAppData();
   if (!cloudEnabled || !ready) return null;
-  if (mode === 'cloud' && email) {
+  // Signed in: show the account even while the account's data is still loading or failed to load.
+  if (email) {
     return (
       <>
       {adminRole ? (
