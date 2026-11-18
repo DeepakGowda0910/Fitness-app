@@ -20,10 +20,25 @@ link to it.
   stage, check-in count. No names, weights, health answers or check-in
   details.
 
+## Managing a user
+
+Every row has a **Manage** button (or click the row on a laptop). It opens
+the account's details and every action the signed-in admin may take, and
+says why when something isn't allowed:
+
+| | Admin | Super admin |
+| --- | --- | --- |
+| Suspend / reactivate a user | yes | yes |
+| Make a user an admin, remove admin | no | yes |
+| Delete a user | no | yes |
+| Your own account, other super admins | no (SQL editor only) | no (SQL editor only) |
+
 ## One-time setup
 
 1. Run `packages/db/supabase/update-1-admin.sql` in the Supabase SQL editor
    (once), then `select public.grant_admin_role('<email>', 'super_admin');`.
+   Projects set up before roles could be managed here also run
+   `update-3-admin-roles.sql` once.
 2. Supabase → Authentication → URL Configuration → Redirect URLs: add
    `<site>/admin/`. Without it, admin sign-in links land on the app instead.
 

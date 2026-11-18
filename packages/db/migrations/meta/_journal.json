@@ -64,6 +64,13 @@
       "when": 1795021171442,
       "tag": "0008_workouts_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795024109870,
+      "tag": "0009_admin_manage_roles",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,10 @@ import {
   listUsers,
   ONBOARDING_LABEL,
   recentActions,
+  setRole,
   setUserStatus,
+  allowedActions,
+  type ActionKind,
   type AdminAction,
   type AdminRole,
   type AdminUser,
@@ -27,20 +30,22 @@ const day = (iso: string | null) => {
   return (d.getFullYear() === new Date().getFullYear() ? shortFmt : dateFmt).format(d);
 };
 
-type Pending = { kind: 'suspend' | 'reactivate' | 'delete'; user: AdminUser };
+type Pending = { kind: ActionKind; user: AdminUser };
 
 /** The dashboard. Shown only after the database has confirmed the role; it checks again on every call. */
-export function AdminView({ role }: { role: AdminRole }) {
-  return <Dashboard role={role} />;
+export function AdminView({ role, email }: { role: AdminRole; email: string }) {
+  return <Dashboard role={role} me={email} />;
 }
 
-function Dashboard({ role }: { role: AdminRole }) {
+function Dashboard({ role, me }: { role: AdminRole; me: string }) {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [actions, setActions] = useState<AdminAction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | UserStatus>('all');
   const [pending, setPending] = useState<Pending | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = users?.find((u) => u.id === openId) ?? null;
   const [done, setDone] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -73,6 +78,7 @@ function Dashboard({ role }: { role: AdminRole }) {
 
   const onDone = async (message: string) => {
     setPending(null);
+    setOpenId(null);
     setDone(message);
     await reload();
   };
@@ -143,7 +149,7 @@ function Dashboard({ role }: { role: AdminRole }) {
                 <li key={u.id} className="rounded-2xl border border-border bg-surface p-4">
                   <p className="break-all font-semibold">{u.email}</p>
                   <div className="mt-2">
-                    <StatusBadge user={u} />
+                    <StatusBadge user={u} isMe={u.email.toLowerCase() === me.toLowerCase()} />
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <Fact label="Progress" value={ONBOARDING_LABEL[u.onboarding]} />
@@ -151,7 +157,13 @@ function Dashboard({ role }: { role: AdminRole }) {
                     <Fact label="Joined" value={day(u.joined_at)} />
                     <Fact label="Last sign-in" value={day(u.last_sign_in_at)} />
                   </dl>
-                  <Actions user={u} role={role} onPick={setPending} />
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(u.id)}
+                    className="mt-4 h-11 w-full rounded-xl border border-border font-medium hover:bg-surface-2"
+                  >
+                    Manage
+                  </button>
                 </li>
               ))}
             </ul>
@@ -167,19 +179,30 @@ function Dashboard({ role }: { role: AdminRole }) {
                     <th scope="col" className="px-3 py-3 text-right font-medium">Check-ins</th>
                     <th scope="col" className="px-3 py-3 font-medium">Joined</th>
                     <th scope="col" className="px-3 py-3 font-medium">Last sign-in</th>
-                    <th scope="col" className="px-3 py-3"><span className="sr-only">Actions</span></th>
+                    <th scope="col" className="px-3 py-3"><span className="sr-only">Manage</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {shown.map((u) => (
-                    <tr key={u.id}>
+                    <tr key={u.id} onClick={() => setOpenId(u.id)} className="cursor-pointer hover:bg-surface-2/60">
                       <td className="max-w-56 truncate px-3 py-3 font-medium" title={u.email}>{u.email}</td>
-                      <td className="px-3 py-3"><StatusBadge user={u} /></td>
+                      <td className="px-3 py-3"><StatusBadge user={u} isMe={u.email.toLowerCase() === me.toLowerCase()} /></td>
                       <td className="whitespace-nowrap px-3 py-3">{ONBOARDING_LABEL[u.onboarding]}</td>
                       <td className="px-3 py-3 text-right tabular-nums">{u.checkins}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-muted">{day(u.joined_at)}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-muted">{day(u.last_sign_in_at)}</td>
-                      <td className="px-3 py-3"><Actions user={u} role={role} onPick={setPending} compact /></td>
+                      <td className="px-3 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenId(u.id);
+                          }}
+                          className="h-9 whitespace-nowrap rounded-lg border border-border bg-surface px-3 font-medium hover:bg-surface-2"
+                        >
+                          Manage
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -207,36 +230,110 @@ function Dashboard({ role }: { role: AdminRole }) {
         )}
       </section>
 
+      {open && !pending ? (
+        <UserPanel
+          user={open}
+          role={role}
+          me={me}
+          onClose={() => setOpenId(null)}
+          onPick={(kind) => setPending({ kind, user: open })}
+        />
+      ) : null}
       {pending ? <ConfirmDialog pending={pending} onCancel={() => setPending(null)} onDone={onDone} /> : null}
     </div>
   );
 }
 
-function Actions({ user, role, onPick, compact }: { user: AdminUser; role: AdminRole; onPick: (p: Pending) => void; compact?: boolean }) {
-  if (user.admin_role) {
-    return <p className={`text-xs text-muted ${compact ? 'whitespace-nowrap text-right' : 'mt-3'}`}>{compact ? 'Managed in Supabase' : 'Admin accounts are managed in Supabase'}</p>;
-  }
-  const btn = 'h-10 rounded-lg border px-3 text-sm font-medium';
+const ACTION_BUTTON: Record<ActionKind, { label: string; hint: string; danger?: boolean }> = {
+  suspend: { label: 'Suspend', hint: 'Blocks sign-in and access to their data. Nothing is deleted.' },
+  reactivate: { label: 'Reactivate', hint: 'Lets them sign in again with their data as they left it.' },
+  make_admin: { label: 'Make admin', hint: 'They can use this admin site to view users, suspend and reactivate.' },
+  remove_admin: { label: 'Remove admin role', hint: 'They become a regular user again.' },
+  delete: { label: 'Delete account', hint: 'Erases the account and all its data for good.', danger: true },
+};
+
+/** Everything about one account that an admin may see, and every action allowed on it. */
+function UserPanel({
+  user,
+  role,
+  me,
+  onClose,
+  onPick,
+}: {
+  user: AdminUser;
+  role: AdminRole;
+  me: string;
+  onClose: () => void;
+  onPick: (kind: ActionKind) => void;
+}) {
+  const { actions, note } = allowedActions(user, role, me);
+  const isMe = user.email.toLowerCase() === me.toLowerCase();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <div className={`flex gap-2 ${compact ? 'justify-end whitespace-nowrap' : 'mt-4'}`}>
-      {user.status === 'suspended' ? (
-        <button type="button" onClick={() => onPick({ kind: 'reactivate', user })} className={`${btn} border-border hover:bg-surface-2 ${compact ? '' : 'flex-1'}`}>
-          Reactivate
-        </button>
-      ) : (
-        <button type="button" onClick={() => onPick({ kind: 'suspend', user })} className={`${btn} border-border hover:bg-surface-2 ${compact ? '' : 'flex-1'}`}>
-          Suspend
-        </button>
-      )}
-      {role === 'super_admin' ? (
-        <button
-          type="button"
-          onClick={() => onPick({ kind: 'delete', user })}
-          className={`${btn} border-danger-border text-danger-text hover:bg-danger-bg ${compact ? '' : 'flex-1'}`}
-        >
-          Delete
-        </button>
-      ) : null}
+    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-title"
+        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-border bg-surface p-6 shadow-lg sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id="user-title" className="break-all text-xl font-semibold">{user.email}</h2>
+            <div className="mt-2">
+              <StatusBadge user={user} isMe={isMe} />
+            </div>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid size-10 shrink-0 place-items-center rounded-lg text-xl text-muted hover:bg-surface-2">
+            ×
+          </button>
+        </div>
+
+        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl bg-surface-2 p-4 text-sm">
+          <Fact label="Role" value={user.admin_role === 'super_admin' ? 'Super admin' : user.admin_role === 'admin' ? 'Admin' : 'User'} />
+          <Fact label="Progress" value={ONBOARDING_LABEL[user.onboarding]} />
+          <Fact label="Check-ins" value={String(user.checkins)} />
+          <Fact label="Last check-in" value={day(user.last_checkin_at)} />
+          <Fact label="Joined" value={day(user.joined_at)} />
+          <Fact label="Last sign-in" value={day(user.last_sign_in_at)} />
+        </dl>
+
+        <h3 className="mt-6 font-semibold">Actions</h3>
+        {actions.length > 0 ? (
+          <ul className="mt-2 space-y-2">
+            {actions.map((kind) => {
+              const b = ACTION_BUTTON[kind];
+              return (
+                <li key={kind}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(kind)}
+                    className={`flex w-full flex-col items-start rounded-xl border px-4 py-3 text-left hover:bg-surface-2 ${
+                      b.danger ? 'border-danger-border text-danger-text hover:bg-danger-bg' : 'border-border'
+                    }`}
+                  >
+                    <span className="font-semibold">{b.label}</span>
+                    <span className={`text-sm ${b.danger ? '' : 'text-muted'}`}>{b.hint}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+        {note ? (
+          <div className="mt-3">
+            <Notice>{note}</Notice>
+          </div>
+        ) : null}
+        <p className="mt-4 text-xs text-muted">Names, weights, health answers and check-in details stay private and aren&apos;t shown here.</p>
+      </div>
     </div>
   );
 }
@@ -248,6 +345,12 @@ const COPY = {
     action: 'Suspend',
   },
   reactivate: { title: 'Reactivate this user?', body: 'They can sign in again and will find their data as they left it.', action: 'Reactivate' },
+  make_admin: {
+    title: 'Make this user an admin?',
+    body: 'They can sign in to this admin site, see the user list and suspend or reactivate accounts. They cannot delete accounts or make other admins.',
+    action: 'Make admin',
+  },
+  remove_admin: { title: 'Remove their admin role?', body: 'They lose access to this admin site straight away and become a regular user.', action: 'Remove admin role' },
   delete: {
     title: 'Delete this user for good?',
     body: 'Their account, answers, weigh-ins and check-ins are erased and cannot be recovered. They could sign up again later as a new user.',
@@ -276,8 +379,16 @@ function ConfirmDialog({ pending, onCancel, onDone }: { pending: Pending; onCanc
     setError(null);
     try {
       if (kind === 'delete') await deleteUser(db, user.id, typed);
+      else if (kind === 'make_admin' || kind === 'remove_admin') await setRole(db, user.id, kind === 'make_admin' ? 'admin' : null);
       else await setUserStatus(db, user.id, kind === 'suspend' ? 'suspended' : 'active');
-      await onDone(`${kind === 'delete' ? 'Deleted' : kind === 'suspend' ? 'Suspended' : 'Reactivated'} ${user.email}.`);
+      const DONE: Record<ActionKind, string> = {
+        delete: 'Deleted',
+        suspend: 'Suspended',
+        reactivate: 'Reactivated',
+        make_admin: 'Made admin:',
+        remove_admin: 'Removed admin role from',
+      };
+      await onDone(`${DONE[kind]} ${user.email}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.');
       setBusy(false);
@@ -331,7 +442,7 @@ function ConfirmDialog({ pending, onCancel, onDone }: { pending: Pending; onCanc
   );
 }
 
-function StatusBadge({ user }: { user: AdminUser }) {
+function StatusBadge({ user, isMe }: { user: AdminUser; isMe?: boolean }) {
   const suspended = user.status === 'suspended';
   return (
     <span className="inline-flex shrink-0 flex-wrap gap-1">
@@ -345,6 +456,7 @@ function StatusBadge({ user }: { user: AdminUser }) {
           {user.admin_role === 'super_admin' ? 'Super admin' : 'Admin'}
         </span>
       ) : null}
+      {isMe ? <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 text-xs font-medium">You</span> : null}
     </span>
   );
 }

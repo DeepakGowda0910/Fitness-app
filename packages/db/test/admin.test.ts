@@ -138,6 +138,32 @@ describe('admin area', () => {
     expect(log[0]).toMatchObject({ actorId: ownerId, subjectUserId: clientId });
   });
 
+  it('a super admin can make a user an admin and remove it again, and it is audited', async () => {
+    await as(OWNER, sql`select public.admin_set_role(${clientId}, 'admin')`);
+    expect(rows(await as(CLIENT, sql`select public.my_admin_role() as r`))[0]!.r).toBe('admin');
+    await as(OWNER, sql`select public.admin_set_role(${clientId}, null)`);
+    expect(rows(await as(CLIENT, sql`select public.my_admin_role() as r`))[0]!.r).toBeNull();
+    const actions = rows(await as(OWNER, sql`select action, actor_email, subject_email from public.admin_recent_actions(2)`));
+    expect(actions).toEqual([
+      { action: 'admin.revoke_role', actor_email: 'owner@example.com', subject_email: 'client@example.com' },
+      { action: 'admin.grant_role:admin', actor_email: 'owner@example.com', subject_email: 'client@example.com' },
+    ]);
+  });
+
+  it('roles: admins cannot grant them, nobody grants super admin or changes their own or a super admin\'s from the app', async () => {
+    expect(await pgErrorCode(as(HELPER, sql`select public.admin_set_role(${clientId}, 'admin')`))).toBe('42501');
+    expect(await pgErrorCode(as(CLIENT, sql`select public.admin_set_role(${clientId}, 'admin')`))).toBe('42501');
+    expect(await pgErrorCode(as(OWNER, sql`select public.admin_set_role(${clientId}, 'super_admin')`))).toBe('42501');
+    expect(await pgErrorCode(as(OWNER, sql`select public.admin_set_role(${ownerId}, null)`))).toBe('42501');
+    await db.execute(sql`select public.grant_admin_role('helper@example.com', 'super_admin')`);
+    expect(await pgErrorCode(as(OWNER, sql`select public.admin_set_role(${helperId}, null)`))).toBe('42501');
+  });
+
+  it('a suspended user cannot be made an admin', async () => {
+    await as(OWNER, sql`select public.admin_set_user_status(${clientId}, 'suspended')`);
+    expect(await pgErrorCode(as(OWNER, sql`select public.admin_set_role(${clientId}, 'admin')`))).toBe('P0002');
+  });
+
   it('new users always start active, whatever they send', async () => {
     const NEW = '44444444-4444-4444-8444-444444444444';
     const [u] = await withUser(db, NEW, (tx) => tx.insert(users).values({ authProviderId: NEW, email: 'n@example.com', status: 'suspended' }).returning());
@@ -156,7 +182,9 @@ describe('supabase/update-1-admin.sql', () => {
     await client.exec(before);
     await client.exec(update);
     // Later updates, in order, so Drizzle has nothing newer to apply.
-    await client.exec(readFileSync(new URL('../supabase/update-2-workouts.sql', import.meta.url), 'utf8'));
+    for (const later of ['update-2-workouts.sql', 'update-3-admin-roles.sql']) {
+      await client.exec(readFileSync(new URL(`../supabase/${later}`, import.meta.url), 'utf8'));
+    }
     const count = async () => (await client.query<{ n: number }>('select count(*)::int as n from drizzle.__drizzle_migrations')).rows[0]!.n;
     const n = await count();
     await migrate(drizzle(client), { migrationsFolder });
