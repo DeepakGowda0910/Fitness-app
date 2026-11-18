@@ -24,3 +24,18 @@ export {
   type Macros,
 } from './targets.js';
 export { assessFeasibility, type Feasibility, type FeasibilityResult } from './feasibility.js';
+export {
+  assessCheckin,
+  trendWeights,
+  trendAt,
+  targetWeeklyRate,
+  redistribute,
+  observedTdee,
+  type WeighIn,
+  type CheckinWeek,
+  type CurrentTargets,
+  type AdaptiveInput,
+  type CheckinStatus,
+  type CheckinDecision,
+  type CheckinAssessment,
+} from './adaptive.js';
