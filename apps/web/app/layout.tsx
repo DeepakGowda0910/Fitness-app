@@ -51,7 +51,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <span className="sm:hidden">Train</span>
                 <span className="hidden sm:inline">Workouts</span>
               </Link>
-              <Link href="/checkin" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+              <Link href="/checkin" className="whitespace-nowrap rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
                 Check-in
               </Link>
               <AccountButton />
