@@ -41,7 +41,7 @@ function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTarg
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-brand">{labelOf(GOALS, t.appliedGoal)}</p>
+          <p className="eyebrow">{labelOf(GOALS, t.appliedGoal)}</p>
           <h1 className="text-3xl font-semibold tracking-tight">Your daily targets</h1>
         </div>
         <Link href="/assessment" className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
@@ -85,7 +85,7 @@ function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTarg
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-2xl bg-brand p-6 text-on-brand shadow-sm lg:col-span-1">
+        <section className="hero-card rounded-2xl bg-brand p-6 text-on-brand shadow-sm lg:col-span-1">
           <h2 className="text-sm font-medium opacity-90">Calories</h2>
           <p className="mt-1 text-5xl font-semibold tracking-tight">
             {fmt(active.calories)}
@@ -108,9 +108,9 @@ function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTarg
             <div className="bg-fat" style={{ width: `${pct(fatKcal)}%` }} />
           </div>
           <dl className="mt-4 grid grid-cols-3 gap-3">
-            <Macro name="Protein" grams={active.proteinG} share={pct(proteinKcal)} color="bg-protein" />
-            <Macro name="Carbs" grams={active.carbsG} share={pct(carbsKcal)} color="bg-carbs" />
-            <Macro name="Fat" grams={active.fatG} share={100 - pct(proteinKcal) - pct(carbsKcal)} color="bg-fat" />
+            <Macro name="Protein" grams={active.proteinG} share={pct(proteinKcal)} color="bg-protein" soft="bg-protein-soft" />
+            <Macro name="Carbs" grams={active.carbsG} share={pct(carbsKcal)} color="bg-carbs" soft="bg-carbs-soft" />
+            <Macro name="Fat" grams={active.fatG} share={100 - pct(proteinKcal) - pct(carbsKcal)} color="bg-fat" soft="bg-fat-soft" />
           </dl>
           <p className="mt-4 text-sm text-muted">
             Protein range for your goal: {fmt(t.proteinRangeG.min)} to {fmt(t.proteinRangeG.max)} g.
@@ -119,10 +119,11 @@ function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTarg
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Stat label="Fibre" value={`${fmt(active.fibreG)} g`} note="At least" />
-        <Stat label="Water" value={`${(t.water.baseMl / 1000).toFixed(1)} L`} note={`Plus ${fmt(t.water.perTrainingHourMl.min)}–${fmt(t.water.perTrainingHourMl.max)} ml per training hour`} />
-        <Stat label="Maintenance (TDEE)" value={`${fmt(t.tdee.value)} kcal`} note={`Likely ${fmt(t.tdee.range.min)}–${fmt(t.tdee.range.max)}. Estimate`} />
+        <Stat tone={1} label="Fibre" value={`${fmt(active.fibreG)} g`} note="At least" />
+        <Stat tone={2} label="Water" value={`${(t.water.baseMl / 1000).toFixed(1)} L`} note={`Plus ${fmt(t.water.perTrainingHourMl.min)}–${fmt(t.water.perTrainingHourMl.max)} ml per training hour`} />
+        <Stat tone={3} label="Maintenance (TDEE)" value={`${fmt(t.tdee.value)} kcal`} note={`Likely ${fmt(t.tdee.range.min)}–${fmt(t.tdee.range.max)}. Estimate`} />
         <Stat
+          tone={4}
           label="Resting (BMR)"
           value={`${fmt(t.bmr.value)} kcal`}
           note={t.bmr.katchMcArdle ? `Mifflin-St Jeor. From body fat: ${fmt(t.bmr.katchMcArdle)}` : 'Mifflin-St Jeor. Estimate'}
@@ -173,9 +174,9 @@ function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTarg
   );
 }
 
-function Macro({ name, grams, share, color }: { name: string; grams: number; share: number; color: string }) {
+function Macro({ name, grams, share, color, soft }: { name: string; grams: number; share: number; color: string; soft: string }) {
   return (
-    <div>
+    <div className={`rounded-xl px-3 py-2.5 ${soft}`}>
       <dt className="flex items-center gap-2 text-sm text-muted">
         <span className={`size-2.5 rounded-full ${color}`} aria-hidden />
         {name}
@@ -189,9 +190,9 @@ function Macro({ name, grams, share, color }: { name: string; grams: number; sha
   );
 }
 
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+function Stat({ tone, label, value, note }: { tone: 1 | 2 | 3 | 4; label: string; value: string; note: string }) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+    <section className={`tint tint-${tone} rounded-2xl border border-border bg-surface p-5 shadow-sm`}>
       <h2 className="text-sm text-muted">{label}</h2>
       <p className="mt-1 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{note}</p>

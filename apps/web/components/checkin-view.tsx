@@ -37,7 +37,7 @@ function Checkins({ active, draft, results }: { active: DayTargets; draft: Asses
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-brand">
+          <p className="eyebrow">
             Now: {fmt(active.calories)} kcal · {fmt(active.proteinG)} g protein · {fmt(active.carbsG)} g carbs · {fmt(active.fatG)} g fat
           </p>
           <h1 className="text-3xl font-semibold tracking-tight">Weekly check-in</h1>
