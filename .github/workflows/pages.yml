@@ -27,7 +27,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build
+      - name: Build the app
         run: pnpm turbo build --filter=@fitness/web
         env:
           NEXT_OUTPUT: export
@@ -36,6 +36,19 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
           NEXT_TELEMETRY_DISABLED: '1'
+      - name: Build the admin site
+        run: pnpm turbo build --filter=@fitness/admin
+        env:
+          NEXT_OUTPUT: export
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}/admin
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_TELEMETRY_DISABLED: '1'
+      # The admin site is a separate app with its own sign-in, published at <site>/admin/.
+      - name: Put the admin site next to the app
+        run: |
+          test ! -e apps/web/out/admin
+          cp -r apps/admin/out apps/web/out/admin
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/web/out
