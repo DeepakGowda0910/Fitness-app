@@ -18,5 +18,5 @@ export default function Home() {
   if (state.kind === 'loading') return <div className="mx-auto h-72 max-w-md animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
   if (state.kind === 'signed_out') return <SignIn linkError={state.linkError} />;
   if (state.kind === 'not_admin') return <SignIn notAdminEmail={state.email} />;
-  return <AdminView role={state.role} />;
+  return <AdminView role={state.role} email={state.email} />;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeAction, filterUsers, type AdminUser } from '../lib/admin';
+import { allowedActions, describeAction, filterUsers, type AdminUser } from '../lib/admin';
 
 const user = (email: string, status: AdminUser['status']): AdminUser => ({
   id: email,
@@ -27,5 +27,24 @@ describe('admin helpers', () => {
     expect(describeAction({ ...base, action: 'admin.suspend_user', subject_email: 'ravi@example.com' })).toBe('Suspended ravi@example.com');
     expect(describeAction({ ...base, action: 'admin.delete_user', subject_email: null })).toBe('Deleted an account');
     expect(describeAction({ ...base, action: 'admin.list_users', subject_email: null })).toBe('Viewed the user list');
+  });
+});
+
+describe('allowedActions', () => {
+  const base = user('client@example.com', 'active');
+  it('offers everything a super admin may do to a regular user', () => {
+    expect(allowedActions(base, 'super_admin', 'me@example.com')).toEqual({ actions: ['suspend', 'make_admin', 'delete'], note: null });
+    expect(allowedActions({ ...base, status: 'suspended' }, 'super_admin', 'me@example.com').actions).toEqual(['reactivate', 'delete']);
+  });
+  it('limits an admin to suspend and reactivate, and says why', () => {
+    const r = allowedActions(base, 'admin', 'me@example.com');
+    expect(r.actions).toEqual(['suspend']);
+    expect(r.note).toMatch(/super admin/);
+  });
+  it('explains instead of hiding when nothing can be done', () => {
+    expect(allowedActions({ ...base, email: 'Me@Example.com' }, 'super_admin', 'me@example.com').note).toMatch(/your own account/);
+    expect(allowedActions({ ...base, admin_role: 'super_admin' }, 'super_admin', 'me@example.com').note).toMatch(/SQL editor/);
+    expect(allowedActions({ ...base, admin_role: 'admin' }, 'super_admin', 'me@example.com').actions).toEqual(['remove_admin']);
+    expect(allowedActions({ ...base, admin_role: 'admin' }, 'admin', 'me@example.com').actions).toEqual([]);
   });
 });

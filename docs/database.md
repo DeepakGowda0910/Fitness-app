@@ -42,6 +42,7 @@ writes `audit_logs`, then acts.
 | `admin_list_users()` | admin | email, status, role, joined, last sign-in, onboarding stage, check-in count. No names, measurements or health answers |
 | `admin_set_user_status(id, 'suspended' \| 'active')` | admin | suspends (bans sign-in in `auth.users`; RLS also stops data access) or reactivates |
 | `admin_delete_user(id, email)` | super admin | erases the account and all data, after the email is typed to confirm. The audit row keeps only the random id |
+| `admin_set_role(id, 'admin' \| null)` | super admin | make a regular user an admin, or remove the admin role (not super admins, not yourself; `0009_admin_manage_roles.sql`) |
 | `admin_recent_actions(n)` | admin | latest admin actions |
 | `grant_admin_role(email, role \| null)` | SQL editor only | make or remove an admin |
 

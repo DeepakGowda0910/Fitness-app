@@ -93,3 +93,35 @@ export async function deleteUser(db: SupabaseClient, userId: string, confirmEmai
   const { error } = await db.rpc('admin_delete_user', { target: userId, confirm_email: confirmEmail });
   if (error) fail('delete this user', error);
 }
+
+export async function setRole(db: SupabaseClient, userId: string, role: 'admin' | null): Promise<void> {
+  const { error } = await db.rpc('admin_set_role', { target: userId, new_role: role });
+  if (error) fail(role ? 'make this user an admin' : 'remove the admin role', error);
+}
+
+export type ActionKind = 'suspend' | 'reactivate' | 'make_admin' | 'remove_admin' | 'delete';
+
+/**
+ * What the signed-in admin may do to this account, and if something is held
+ * back, why. The database enforces the same rules; this only decides which
+ * buttons to show.
+ */
+export function allowedActions(user: AdminUser, myRole: AdminRole, myEmail: string): { actions: ActionKind[]; note: string | null } {
+  if (user.email.toLowerCase() === myEmail.toLowerCase()) {
+    return { actions: [], note: "This is your own account. It can't be changed here, so you can't lock yourself out by accident." };
+  }
+  if (user.admin_role === 'super_admin') {
+    return { actions: [], note: 'Super admin accounts can only be changed in the Supabase SQL editor.' };
+  }
+  if (user.admin_role === 'admin') {
+    return myRole === 'super_admin'
+      ? { actions: ['remove_admin'], note: 'To suspend or delete this account, remove its admin role first.' }
+      : { actions: [], note: 'Only a super admin can change another admin.' };
+  }
+  const actions: ActionKind[] = [user.status === 'suspended' ? 'reactivate' : 'suspend'];
+  if (myRole === 'super_admin') {
+    if (user.status === 'active') actions.push('make_admin');
+    actions.push('delete');
+  }
+  return { actions, note: myRole === 'super_admin' ? null : 'Only a super admin can delete accounts or make admins.' };
+}
