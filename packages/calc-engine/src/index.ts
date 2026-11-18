@@ -39,3 +39,13 @@ export {
   type CheckinDecision,
   type CheckinAssessment,
 } from './adaptive.js';
+export {
+  solveDay,
+  totalsFor,
+  checkTolerances,
+  type SolverItem,
+  type DayTargets,
+  type NutrientTotals,
+  type ToleranceCheck,
+  type SolverResult,
+} from './meal-solver.js';

@@ -68,6 +68,28 @@ importers:
         specifier: ^4.1.12
         version: 4.1.12(@types/node@22.20.5)(vite@8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15))
 
+  packages/meal-planner:
+    dependencies:
+      '@fitness/calc-engine':
+        specifier: workspace:*
+        version: link:../calc-engine
+      '@fitness/food-data':
+        specifier: workspace:*
+        version: link:../food-data
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.5
+      fast-check:
+        specifier: ^4.10.2
+        version: 4.10.2
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.12
+        version: 4.1.12(@types/node@22.20.5)(vite@8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15))
+
 packages:
 
   '@drizzle-team/brocli@0.10.2':
