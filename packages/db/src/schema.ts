@@ -383,3 +383,73 @@ export const checkinAssessments = pgTable('checkin_assessments', {
   explanation: text('explanation'),
   createdAt: createdAt(),
 });
+
+// ---------- Food reference data ----------
+
+export const foodSourceCode = pgEnum('food_source_code', ['IFCT_2017', 'USDA_FDC', 'OFF', 'CUSTOM']);
+export const foodState = pgEnum('food_state', ['raw', 'cooked', 'processed']);
+
+/** Where food data came from, with its licence, so every number is traceable. */
+export const foodSources = pgTable('food_sources', {
+  id: id(),
+  code: foodSourceCode('code').notNull().unique(),
+  name: text('name').notNull(),
+  version: text('version').notNull(),
+  licence: text('licence').notNull(),
+  createdAt: createdAt(),
+});
+
+/** Reference foods, nutrients per 100 g edible portion. Readable by everyone signed in. */
+export const foods = pgTable(
+  'foods',
+  {
+    id: id(),
+    sourceId: uuid('source_id')
+      .notNull()
+      .references(() => foodSources.id),
+    externalId: text('external_id').notNull(),
+    name: text('name').notNull(),
+    localNames: text('local_names').array().notNull().default(sql`'{}'::text[]`),
+    foodGroup: text('food_group').notNull(),
+    state: foodState('state').notNull().default('raw'),
+    vegetarian: boolean('vegetarian').notNull(),
+    eggetarian: boolean('eggetarian').notNull(),
+    pescatarian: boolean('pescatarian').notNull(),
+    verified: boolean('verified').notNull().default(true),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('foods_source_external_uq').on(t.sourceId, t.externalId),
+    index('foods_name_idx').on(t.name),
+  ],
+);
+
+/** One row per nutrient, e.g. protein_g, calcium_mg. Amounts per 100 g. */
+export const foodNutrients = pgTable(
+  'food_nutrients',
+  {
+    foodId: uuid('food_id')
+      .notNull()
+      .references(() => foods.id, { onDelete: 'cascade' }),
+    nutrientCode: text('nutrient_code').notNull(),
+    amountPer100g: numeric('amount_per_100g', { precision: 10, scale: 3, mode: 'number' }).notNull(),
+  },
+  (t) => [
+    uniqueIndex('food_nutrients_pk').on(t.foodId, t.nutrientCode),
+    check('amount_non_negative', sql`${t.amountPer100g} >= 0`),
+  ],
+);
+
+/** Household measures for Indian serving sizes ("1 katori", "1 roti"). */
+export const foodPortions = pgTable(
+  'food_portions',
+  {
+    id: id(),
+    foodId: uuid('food_id')
+      .notNull()
+      .references(() => foods.id, { onDelete: 'cascade' }),
+    label: text('label').notNull(),
+    grams: numeric('grams', { precision: 7, scale: 1, mode: 'number' }).notNull(),
+  },
+  (t) => [uniqueIndex('food_portions_label_uq').on(t.foodId, t.label), check('grams_positive', sql`${t.grams} > 0`)],
+);
