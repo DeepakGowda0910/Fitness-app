@@ -2,24 +2,13 @@
  * Runs the real migrations against an in-memory Postgres (PGlite), so the
  * schema is tested without any hosted database or credentials.
  */
-import { PGlite } from '@electric-sql/pglite';
 import { computeTargets } from '@fitness/calc-engine';
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/pglite';
-import { migrate } from 'drizzle-orm/pglite/migrator';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { schema } from '../src/index.js';
+import { freshDb, pgErrorCode, type Db } from './helpers.js';
 
 const { users, userProfiles, consents, nutritionTargets, weeklyCheckins, auditLogs } = schema;
-
-async function freshDb() {
-  const client = new PGlite();
-  const db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: new URL('../migrations', import.meta.url).pathname });
-  return db;
-}
-
-type Db = Awaited<ReturnType<typeof freshDb>>;
 
 async function createUser(db: Db, n = 1) {
   const [u] = await db
@@ -27,17 +16,6 @@ async function createUser(db: Db, n = 1) {
     .values({ authProviderId: `auth|${n}`, email: `user${n}@example.com` })
     .returning();
   return u!;
-}
-
-/** Postgres error code, whether thrown directly or wrapped by Drizzle. */
-async function pgErrorCode(p: Promise<unknown>): Promise<string | undefined> {
-  try {
-    await p;
-  } catch (e) {
-    const err = e as { code?: string; cause?: { code?: string } };
-    return err.cause?.code ?? err.code;
-  }
-  return undefined;
 }
 
 describe('schema', () => {
