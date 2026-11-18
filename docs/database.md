@@ -38,3 +38,13 @@ or credentials are needed.
 `seedIfct2017(db, ifct2017())` imports the 542 IFCT 2017 foods from
 `@fitness/food-data` with 11 nutrients each (per 100 g). It is idempotent, so
 it can be re-run after a data correction. Run it with the service role.
+
+## Applying to Supabase
+
+`packages/db/supabase/setup.sql` contains every migration in order plus
+Drizzle's bookkeeping rows, in one transaction, for the Supabase SQL editor.
+Regenerate it after adding a migration with
+`node packages/db/scripts/supabase-setup-sql.mjs` (a test fails if it is out
+of date). It also grants table access to signed-in users (`authenticated`)
+and removes it from signed-out visitors (`anon`); row-level security then
+limits each user to their own rows.

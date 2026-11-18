@@ -8,7 +8,12 @@
       "outputs": [
         "dist/**",
         ".next/**",
-        "!.next/cache/**"
+        "!.next/cache/**",
+        "out/**"
+      ],
+      "env": [
+        "NEXT_OUTPUT",
+        "NEXT_PUBLIC_*"
       ]
     },
     "test": {

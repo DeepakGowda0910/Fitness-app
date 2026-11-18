@@ -1,17 +1,16 @@
 import { computeTargets } from '@fitness/calc-engine';
 import { describe, expect, it } from 'vitest';
 import { toTargetsInput, type AssessmentDraft } from '@/lib/assessment';
+import { EPOCH } from '@/lib/backend';
 import {
   activeDayTargets,
   activeTargets,
-  addWeighIn,
-  emptyState,
-  baseKeyOf,
+  newCheckin,
   nextCheckinDate,
-  removeWeighIn,
-  runCheckin,
-  stateFor,
-  type CheckinState,
+  replay,
+  withWeighIn,
+  type StoredWeighIn,
+  type TrackingData,
   type WeekAnswers,
 } from '@/lib/checkins';
 
@@ -32,68 +31,90 @@ const draft: AssessmentDraft = {
 const base = computeTargets(toTargetsInput(draft));
 const good: WeekAnswers = { daysLogged: 7, dietAdherencePct: 90, hunger: 3, energy: 3, sleepQuality: 4 };
 
-/** Daily weigh-ins from a start date, changing by `perDay` kg. */
-function weighInsFrom(state: CheckinState, start: string, days: number, startKg: number, perDay: number): CheckinState {
-  let s = state;
+const addDays = (date: string, n: number) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/** Daily weigh-ins, each recorded on its own morning. */
+function weighIns(start: string, days: number, startKg: number, perDay: number): StoredWeighIn[] {
+  let list: StoredWeighIn[] = [];
   for (let i = 0; i < days; i++) {
-    const d = new Date(`${start}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + i);
-    s = addWeighIn(s, { date: d.toISOString().slice(0, 10), weightKg: Math.round((startKg + perDay * i) * 10) / 10 });
+    const date = addDays(start, i);
+    list = withWeighIn(list, { date, weightKg: Math.round((startKg + perDay * i) * 10) / 10, recordedAt: `${date}T07:00:00.000Z` });
   }
-  return s;
+  return list;
 }
 
-describe('weigh-ins', () => {
-  it('keeps one per date, in order, and can remove one', () => {
-    let s = emptyState('k');
-    s = addWeighIn(s, { date: '2026-11-10', weightKg: 85 });
-    s = addWeighIn(s, { date: '2026-11-08', weightKg: 85.4 });
-    s = addWeighIn(s, { date: '2026-11-10', weightKg: 84.8 });
-    expect(s.weighIns).toEqual([
-      { date: '2026-11-08', weightKg: 85.4 },
-      { date: '2026-11-10', weightKg: 84.8 },
+/** Submits a check-in on each date (in the evening), as the app would. */
+function checkInOn(data: TrackingData, dates: string[], answers: WeekAnswers = good): TrackingData {
+  let d = data;
+  for (const date of dates) d = { ...d, checkins: [...d.checkins, newCheckin(d, answers, date, `${date}T20:00:00.000Z`, false)] };
+  return d;
+}
+
+describe('withWeighIn', () => {
+  it('keeps one per date, in order', () => {
+    let list: StoredWeighIn[] = [];
+    list = withWeighIn(list, { date: '2026-11-10', weightKg: 85, recordedAt: 'a' });
+    list = withWeighIn(list, { date: '2026-11-08', weightKg: 85.4, recordedAt: 'b' });
+    list = withWeighIn(list, { date: '2026-11-10', weightKg: 84.8, recordedAt: 'c' });
+    expect(list.map((w) => [w.date, w.weightKg])).toEqual([
+      ['2026-11-08', 85.4],
+      ['2026-11-10', 84.8],
     ]);
-    expect(removeWeighIn(s, '2026-11-08').weighIns).toHaveLength(1);
   });
 });
 
-describe('runCheckin', () => {
-  it('holds targets when weight is flat but adherence was low', () => {
-    let s = weighInsFrom(emptyState(baseKeyOf(base)), '2026-11-01', 15, 85, 0);
-    s = runCheckin(s, base, good, '2026-11-08').state;
-    const { assessment } = runCheckin(s, base, { ...good, dietAdherencePct: 50, daysLogged: 3 }, '2026-11-15');
-    expect(assessment.decision).toBe('hold_for_adherence');
-    expect(assessment.newTargets).toBeNull();
+describe('replay', () => {
+  it('holds targets when adherence was low', () => {
+    let data: TrackingData = { since: EPOCH, weighIns: weighIns('2026-11-01', 15, 85, 0), checkins: [] };
+    data = checkInOn(data, ['2026-11-08']);
+    data = checkInOn(data, ['2026-11-15'], { ...good, dietAdherencePct: 50, daysLogged: 3 });
+    const results = replay(base, data);
+    expect(results.at(-1)!.assessment.decision).toBe('hold_for_adherence');
   });
 
-  it('lowers calories when weight stalls with good adherence, never below the floor, and never changes protein', () => {
-    let s = weighInsFrom(emptyState(baseKeyOf(base)), '2026-10-25', 29, 85, 0);
-    for (const d of ['2026-11-01', '2026-11-08', '2026-11-15', '2026-11-22']) s = runCheckin(s, base, good, d).state;
-    const decisions = s.results.map((r) => r.assessment.decision);
-    expect(decisions).toContain('decrease');
-    const now = activeTargets(base, s);
+  it('lowers calories when weight stalls, never below the floor, and never changes protein', () => {
+    let data: TrackingData = { since: EPOCH, weighIns: weighIns('2026-10-25', 29, 85, 0), checkins: [] };
+    data = checkInOn(data, ['2026-11-01', '2026-11-08', '2026-11-15', '2026-11-22']);
+    const results = replay(base, data);
+    expect(results.map((r) => r.assessment.decision)).toContain('decrease');
+    const now = activeTargets(base, results);
     expect(now.calories).toBeLessThan(base.calories);
     expect(now.calories).toBeGreaterThanOrEqual(Math.max(1500, base.bmr.value));
-    for (const r of s.results) expect(r.targetsAfter.proteinG).toBe(base.proteinG);
-    const day = activeDayTargets(base, s);
-    expect(day.fibreG).toBe(Math.round((14 * now.calories) / 1000));
+    for (const r of results) expect(r.targetsAfter.proteinG).toBe(base.proteinG);
+    expect(activeDayTargets(base, results).fibreG).toBe(Math.round((14 * now.calories) / 1000));
   });
 
-  it('allows one check-in a week', () => {
-    let s = weighInsFrom(emptyState(baseKeyOf(base)), '2026-11-01', 8, 85, -0.05);
-    s = runCheckin(s, base, good, '2026-11-08').state;
-    expect(nextCheckinDate(s, '2026-11-10')).toBe('2026-11-14');
-    expect(() => runCheckin(s, base, good, '2026-11-10')).toThrow();
-    expect(nextCheckinDate(s, '2026-11-14')).toBeNull();
+  it('gives each check-in only the weigh-ins recorded before it, so backdated entries do not rewrite history', () => {
+    let data: TrackingData = { since: EPOCH, weighIns: weighIns('2026-11-01', 15, 85, 0), checkins: [] };
+    data = checkInOn(data, ['2026-11-15']);
+    const before = replay(base, data)[0]!.assessment;
+    // A week later the user backfills lower weights for the earlier days.
+    const backfill = weighIns('2026-11-08', 7, 83, 0).map((w) => ({ ...w, recordedAt: '2026-11-20T07:00:00.000Z' }));
+    const after = replay(base, { ...data, weighIns: backfill.reduce(withWeighIn, data.weighIns) })[0]!.assessment;
+    expect(after).toEqual(before);
+  });
+
+  it('ignores check-ins made under earlier assessment answers', () => {
+    let data: TrackingData = { since: EPOCH, weighIns: weighIns('2026-10-25', 15, 85, 0), checkins: [] };
+    data = checkInOn(data, ['2026-11-01', '2026-11-08']);
+    expect(replay(base, data)).toHaveLength(2);
+    const edited = { ...data, since: '2026-11-09T10:00:00.000Z' };
+    expect(replay(base, edited)).toHaveLength(0);
+    expect(activeTargets(base, replay(base, edited)).calories).toBe(base.calories);
+    expect(nextCheckinDate(edited, '2026-11-10')).toBeNull();
   });
 });
 
-describe('stateFor', () => {
-  it('starts fresh when the assessment changes', () => {
-    const s = addWeighIn(emptyState(baseKeyOf(base)), { date: '2026-11-01', weightKg: 85 });
-    expect(stateFor(s, base).weighIns).toHaveLength(1);
-    const other = computeTargets(toTargetsInput({ ...draft, weightKg: 90 }));
-    expect(stateFor(s, other).weighIns).toHaveLength(0);
-    expect(stateFor(null, base).results).toEqual([]);
+describe('newCheckin', () => {
+  it('allows one check-in a week', () => {
+    let data: TrackingData = { since: EPOCH, weighIns: weighIns('2026-11-01', 8, 85, -0.05), checkins: [] };
+    data = checkInOn(data, ['2026-11-08']);
+    expect(nextCheckinDate(data, '2026-11-10')).toBe('2026-11-14');
+    expect(() => newCheckin(data, good, '2026-11-10', '2026-11-10T20:00:00.000Z', false)).toThrow();
+    expect(nextCheckinDate(data, '2026-11-14')).toBeNull();
   });
 });
