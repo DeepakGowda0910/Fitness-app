@@ -1,0 +1,202 @@
+'use client';
+
+import { computeTargets, type NutritionTargets } from '@fitness/calc-engine';
+import Link from 'next/link';
+import { useMemo } from 'react';
+import { toTargetsInput, validateStep } from '@/lib/assessment';
+import { GOALS, labelOf } from '@/lib/labels';
+import { useAssessmentDraft } from '@/lib/storage';
+import { Notice } from './fields';
+
+const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
+
+export function ResultsView() {
+  const { draft, ready } = useAssessmentDraft();
+
+  const result = useMemo((): { targets: NutritionTargets } | { error: string } | null => {
+    if (!ready) return null;
+    if (Object.keys(validateStep('review', draft)).length > 0) return { error: 'incomplete' };
+    try {
+      return { targets: computeTargets(toTargetsInput(draft)) };
+    } catch {
+      return { error: 'invalid' };
+    }
+  }, [draft, ready]);
+
+  if (!result) return <div className="h-96 animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
+
+  if ('error' in result) {
+    return (
+      <div className="mx-auto max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-sm">
+        <h1 className="text-2xl font-semibold">No targets yet</h1>
+        <p className="mt-2 text-muted">Answer a few questions and we&apos;ll work out your calories and macros.</p>
+        <Link href="/assessment" className="mt-6 inline-flex h-12 items-center rounded-xl bg-brand px-6 font-semibold text-on-brand">
+          {Object.keys(draft).length > 0 ? 'Finish the assessment' : 'Start the assessment'}
+        </Link>
+      </div>
+    );
+  }
+
+  return <Targets t={result.targets} />;
+}
+
+function Targets({ t }: { t: NutritionTargets }) {
+  const proteinKcal = t.proteinG * 4;
+  const carbsKcal = t.carbsG * 4;
+  const fatKcal = t.fatG * 9;
+  const macroKcal = proteinKcal + carbsKcal + fatKcal;
+  const pct = (k: number) => Math.round((k / macroKcal) * 100);
+  const goalChanged = t.appliedGoal !== t.requestedGoal;
+  const deficit = t.dailyDeficitKcal;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-brand">{labelOf(GOALS, t.appliedGoal)}</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Your daily targets</h1>
+        </div>
+        <Link href="/assessment" className="rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
+          Edit answers
+        </Link>
+      </div>
+
+      {t.screening.requiresDoctorReview ? (
+        <Notice tone="danger">
+          <p className="font-semibold">Please check these targets with your doctor before you follow them.</p>
+          <ul className="mt-1 list-disc pl-5">
+            {t.screening.messages.map((m) => (
+              <li key={m.code}>{m.message}</li>
+            ))}
+          </ul>
+        </Notice>
+      ) : t.screening.messages.length > 0 ? (
+        <Notice tone="warn">
+          <ul className="list-disc pl-5">
+            {t.screening.messages.map((m) => (
+              <li key={m.code}>{m.message}</li>
+            ))}
+          </ul>
+        </Notice>
+      ) : null}
+
+      {goalChanged ? (
+        <Notice tone="warn">
+          You chose &ldquo;{labelOf(GOALS, t.requestedGoal)}&rdquo;. Because of your health answers, these targets are for &ldquo;
+          {labelOf(GOALS, t.appliedGoal)}&rdquo; instead.
+        </Notice>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className="rounded-2xl bg-brand p-6 text-on-brand shadow-sm lg:col-span-1">
+          <h2 className="text-sm font-medium opacity-90">Calories</h2>
+          <p className="mt-1 text-5xl font-semibold tracking-tight">
+            {fmt(t.calories)}
+            <span className="ml-1 text-lg font-medium opacity-80">kcal/day</span>
+          </p>
+          <p className="mt-3 text-sm opacity-90">
+            {deficit > 5
+              ? `${fmt(deficit)} kcal below your estimated maintenance.`
+              : deficit < -5
+                ? `${fmt(-deficit)} kcal above your estimated maintenance.`
+                : 'About your estimated maintenance.'}
+          </p>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm lg:col-span-2">
+          <h2 className="text-sm font-medium text-muted">Macros</h2>
+          <div className="mt-3 flex h-3 overflow-hidden rounded-full" aria-hidden>
+            <div className="bg-protein" style={{ width: `${pct(proteinKcal)}%` }} />
+            <div className="bg-carbs" style={{ width: `${pct(carbsKcal)}%` }} />
+            <div className="bg-fat" style={{ width: `${pct(fatKcal)}%` }} />
+          </div>
+          <dl className="mt-4 grid grid-cols-3 gap-3">
+            <Macro name="Protein" grams={t.proteinG} share={pct(proteinKcal)} color="bg-protein" />
+            <Macro name="Carbs" grams={t.carbsG} share={pct(carbsKcal)} color="bg-carbs" />
+            <Macro name="Fat" grams={t.fatG} share={100 - pct(proteinKcal) - pct(carbsKcal)} color="bg-fat" />
+          </dl>
+          <p className="mt-4 text-sm text-muted">
+            Protein range for your goal: {fmt(t.proteinRangeG.min)} to {fmt(t.proteinRangeG.max)} g.
+          </p>
+        </section>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <Stat label="Fibre" value={`${fmt(t.fibreG)} g`} note="At least" />
+        <Stat label="Water" value={`${(t.water.baseMl / 1000).toFixed(1)} L`} note={`Plus ${fmt(t.water.perTrainingHourMl.min)}–${fmt(t.water.perTrainingHourMl.max)} ml per training hour`} />
+        <Stat label="Maintenance (TDEE)" value={`${fmt(t.tdee.value)} kcal`} note={`Likely ${fmt(t.tdee.range.min)}–${fmt(t.tdee.range.max)}. Estimate`} />
+        <Stat
+          label="Resting (BMR)"
+          value={`${fmt(t.bmr.value)} kcal`}
+          note={t.bmr.katchMcArdle ? `Mifflin-St Jeor. From body fat: ${fmt(t.bmr.katchMcArdle)}` : 'Mifflin-St Jeor. Estimate'}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <h2 className="font-semibold">How we worked this out</h2>
+          <ul className="mt-3 space-y-2 text-sm text-muted">
+            <li>
+              Activity factor {t.tdee.activityFactor.toFixed(2)} × resting energy {fmt(t.bmr.value)} kcal = maintenance {fmt(t.tdee.value)} kcal.
+            </li>
+            {t.referenceWeightKg !== t.inputs.weightKg ? (
+              <li>Protein and fat are set from a reference weight of {t.referenceWeightKg} kg rather than your current weight.</li>
+            ) : null}
+            {t.assumptions.map((m) => (
+              <li key={m.code}>{m.message}</li>
+            ))}
+            {t.warnings.map((m) => (
+              <li key={m.code} className="text-warn-text">
+                {m.message}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-xs text-muted">
+            These are starting estimates from standard formulas, not medical advice. Weekly check-ins adjust them to how your body actually
+            responds. Engine {t.engineVersion}.
+          </p>
+        </section>
+
+        <section className="flex flex-col justify-between rounded-2xl border border-dashed border-border bg-surface-2 p-6">
+          <div>
+            <h2 className="font-semibold">Your 7-day diet plan</h2>
+            <p className="mt-2 text-sm text-muted">Indian meals sized to these targets, for your diet and allergies. Coming in the next update.</p>
+          </div>
+          <span className="mt-4 inline-flex h-11 w-fit items-center rounded-xl border border-border px-5 text-sm font-medium text-muted">
+            Coming soon
+          </span>
+        </section>
+      </div>
+
+      <p className="text-xs text-muted">
+        Your answers are saved only in this browser for now. Saving to an account comes once sign-in is set up.
+      </p>
+    </div>
+  );
+}
+
+function Macro({ name, grams, share, color }: { name: string; grams: number; share: number; color: string }) {
+  return (
+    <div>
+      <dt className="flex items-center gap-2 text-sm text-muted">
+        <span className={`size-2.5 rounded-full ${color}`} aria-hidden />
+        {name}
+      </dt>
+      <dd className="mt-1 text-2xl font-semibold">
+        {fmt(grams)}
+        <span className="text-base font-medium text-muted"> g</span>
+      </dd>
+      <dd className="text-xs text-muted">{share}% of calories</dd>
+    </div>
+  );
+}
+
+function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+      <h2 className="text-sm text-muted">{label}</h2>
+      <p className="mt-1 text-2xl font-semibold">{value}</p>
+      <p className="mt-1 text-xs text-muted">{note}</p>
+    </section>
+  );
+}
