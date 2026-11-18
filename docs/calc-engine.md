@@ -18,7 +18,7 @@ value means bumping `POLICY_VERSION`.
 | Step | Rule |
 | --- | --- |
 | BMR | Mifflin-St Jeor: 10·W + 6.25·H − 5·A + (5 male / −161 female). Katch-McArdle (370 + 21.6·LBM) shown alongside only when body fat was *measured*. |
-| Activity factor | Base from average daily steps (<5k 1.2, <7.5k 1.3, <10k 1.4, <12.5k 1.5, else 1.6) or, if unknown, occupation (1.2 / 1.3 / 1.4 / 1.55). Plus 0.05 per training day per hour of training. Clamped to 1.2–1.9. |
+| Activity factor | Base from average daily steps (<5k 1.2, <7.5k 1.3, <10k 1.375, <12.5k 1.45, else 1.5) or, if unknown, occupation (1.2 / 1.3 / 1.4 / 1.55). Plus 0.03 per training day per hour of training (an hour in the gym burns roughly 250–350 kcal above rest). Clamped to 1.2–1.9. Policy 2026.11.2 used 1.4 / 1.5 / 1.6 for the top step bands and 0.05 per training hour, which put active people 10–15% above common calculators. |
 | TDEE | BMR × activity factor, with a ±10% uncertainty band. |
 | Fat loss | Deficit for 0.5%/week by default (user may pick 0.1–1.0%; above 0.75% is flagged aggressive), using 7,700 kcal/kg. Capped at 25% of TDEE. |
 | Recomposition | TDEE × 0.95 (warns if no resistance training). |
@@ -58,10 +58,10 @@ These match `test/reference-cases.test.ts`.
 **Case A.** Male, 30 y, 180 cm, 80 kg, 8,000 steps/day, 4 × 60 min training, fat loss at the default 0.5%/week.
 
 - BMR = 800 + 1125 − 150 + 5 = **1780**
-- Activity = 1.4 (steps) + 4 × 0.05 = **1.6**; TDEE = 1780 × 1.6 = **2848** (range 2563–3133)
-- Deficit = 80 × 0.005 × 7700 / 7 = 440 (cap 712) → 2408 → rounded up **2410 kcal**
-- Protein 2.0 × 80 = **160 g**; fat 25% × 2410 / 9 = **67 g**; carbs (2410 − 640 − 603) / 4 = **292 g**
-- Fibre 14 × 2.41 = **34 g**; water 35 × 80 = **2800 ml**
+- Activity = 1.375 (steps) + 4 × 0.03 = **1.495**; TDEE = 1780 × 1.495 = **2661** (range 2395–2927)
+- Deficit = 80 × 0.005 × 7700 / 7 = 440 (cap 665) → 2221 → rounded up **2230 kcal**
+- Protein 2.0 × 80 = **160 g**; fat 25% × 2230 / 9 = **62 g**; carbs (2230 − 640 − 558) / 4 = **258 g**
+- Fibre 14 × 2.23 = **31 g**; water 35 × 80 = **2800 ml**
 
 **Case B.** Female, 45 y, 160 cm, 95 kg (BMI 37.1), light job, no steps given, no training, fat loss at 0.75%/week.
 

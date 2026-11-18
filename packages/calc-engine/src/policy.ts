@@ -11,7 +11,7 @@
 
 import type { Goal } from './types.js';
 
-export const POLICY_VERSION = '2026.11.2';
+export const POLICY_VERSION = '2026.11.3';
 
 export interface GoalPolicy {
   /** Protein in g per kg of reference weight: the default used, and the guidance range. */
@@ -34,16 +34,24 @@ export const policy = {
       moderate: 1.4,
       heavy: 1.55,
     },
-    /** Non-exercise activity factor by average daily steps (upper bound exclusive). */
+    /**
+     * Non-exercise activity factor by average daily steps (upper bound exclusive).
+     * Each extra 1,000 steps burns roughly 0.5 kcal per kg, about 0.02–0.03 of a
+     * typical BMR, so the bands rise by less than 0.1 each.
+     */
     stepsFactor: [
       { below: 5000, factor: 1.2 },
       { below: 7500, factor: 1.3 },
-      { below: 10000, factor: 1.4 },
-      { below: 12500, factor: 1.5 },
-      { below: Infinity, factor: 1.6 },
+      { below: 10000, factor: 1.375 },
+      { below: 12500, factor: 1.45 },
+      { below: Infinity, factor: 1.5 },
     ],
-    /** Added to the activity factor per training day, scaled by session length / 60 min. */
-    perTrainingDayPerHour: 0.05,
+    /**
+     * Added to the activity factor per training day, scaled by session length / 60 min.
+     * An hour of gym training burns roughly 250–350 kcal above rest; spread over
+     * the week that is about 0.03 of BMR per weekly session.
+     */
+    perTrainingDayPerHour: 0.03,
     /** Session length assumed when the user does not give one. */
     defaultSessionMinutes: 60,
   },
