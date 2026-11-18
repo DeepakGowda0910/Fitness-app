@@ -2,52 +2,62 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { AssessmentDraft } from './assessment';
+import type { CheckinState } from './checkins';
 
-const KEY = 'fitness.assessment.v1';
+export const ASSESSMENT_KEY = 'fitness.assessment.v1';
+export const CHECKINS_KEY = 'fitness.checkins.v1';
 
-function read(): AssessmentDraft {
+function read<T>(key: string, fallback: T): T {
   try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as AssessmentDraft) : {};
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
-    return {};
+    return fallback;
   }
 }
 
-function write(d: AssessmentDraft) {
+function write(key: string, value: unknown) {
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(d));
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Private mode or storage full: answers last for this visit only.
+    // Private mode or storage full: data lasts for this visit only.
   }
 }
 
 /**
- * The assessment draft, kept in this browser until accounts are connected.
- * `ready` is false until the saved draft has been read, to avoid a flash of empty answers.
+ * A value kept in this browser until accounts are connected.
+ * `ready` is false until the saved value has been read, to avoid a flash of empty content.
  */
-export function useAssessmentDraft() {
-  const [draft, setDraft] = useState<AssessmentDraft>({});
+export function useLocalValue<T>(key: string, fallback: T) {
+  const [value, setValue] = useState<T>(fallback);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setDraft(read());
+    setValue(read(key, fallback));
     setReady(true);
-  }, []);
+    // fallback is a constant per call site
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
 
-  const update = useCallback((next: AssessmentDraft) => {
-    setDraft(next);
-    write(next);
-  }, []);
+  const update = useCallback(
+    (next: T) => {
+      setValue(next);
+      write(key, next);
+    },
+    [key],
+  );
 
-  const clear = useCallback(() => {
-    setDraft({});
-    try {
-      window.localStorage.removeItem(KEY);
-    } catch {
-      // ignore
-    }
-  }, []);
+  return { value, ready, update };
+}
 
-  return { draft, ready, update, clear };
+const EMPTY_DRAFT: AssessmentDraft = {};
+
+export function useAssessmentDraft() {
+  const { value, ready, update } = useLocalValue<AssessmentDraft>(ASSESSMENT_KEY, EMPTY_DRAFT);
+  return { draft: value, ready, update };
+}
+
+export function useCheckinState() {
+  return useLocalValue<CheckinState | null>(CHECKINS_KEY, null);
 }

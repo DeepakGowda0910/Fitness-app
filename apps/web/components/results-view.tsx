@@ -1,6 +1,6 @@
 'use client';
 
-import type { NutritionTargets } from '@fitness/calc-engine';
+import type { DayTargets, NutritionTargets } from '@fitness/calc-engine';
 import Link from 'next/link';
 import { GOALS, labelOf } from '@/lib/labels';
 import { useTargets } from '@/lib/targets';
@@ -12,7 +12,7 @@ export function ResultsView() {
   const state = useTargets();
   if (state.status === 'loading') return <div className="h-96 animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
   if (state.status === 'incomplete') return <NoTargets started={Object.keys(state.draft).length > 0} />;
-  return <Targets t={state.targets} />;
+  return <Targets t={state.targets} active={state.active} adjusted={state.adjusted} />;
 }
 
 export function NoTargets({ started }: { started: boolean }) {
@@ -27,14 +27,14 @@ export function NoTargets({ started }: { started: boolean }) {
   );
 }
 
-function Targets({ t }: { t: NutritionTargets }) {
-  const proteinKcal = t.proteinG * 4;
-  const carbsKcal = t.carbsG * 4;
-  const fatKcal = t.fatG * 9;
+function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTargets; adjusted: boolean }) {
+  const proteinKcal = active.proteinG * 4;
+  const carbsKcal = active.carbsG * 4;
+  const fatKcal = active.fatG * 9;
   const macroKcal = proteinKcal + carbsKcal + fatKcal;
   const pct = (k: number) => Math.round((k / macroKcal) * 100);
   const goalChanged = t.appliedGoal !== t.requestedGoal;
-  const deficit = t.dailyDeficitKcal;
+  const deficit = t.tdee.value - active.calories;
 
   return (
     <div className="space-y-6">
@@ -67,6 +67,15 @@ function Targets({ t }: { t: NutritionTargets }) {
         </Notice>
       ) : null}
 
+      {adjusted ? (
+        <Notice>
+          Your weekly check-ins changed your calories from {fmt(t.calories)} to {fmt(active.calories)} kcal. Protein stays the same.{' '}
+          <Link href="/checkin" className="font-medium text-brand underline">
+            See check-ins
+          </Link>
+        </Notice>
+      ) : null}
+
       {goalChanged ? (
         <Notice tone="warn">
           You chose &ldquo;{labelOf(GOALS, t.requestedGoal)}&rdquo;. Because of your health answers, these targets are for &ldquo;
@@ -78,7 +87,7 @@ function Targets({ t }: { t: NutritionTargets }) {
         <section className="rounded-2xl bg-brand p-6 text-on-brand shadow-sm lg:col-span-1">
           <h2 className="text-sm font-medium opacity-90">Calories</h2>
           <p className="mt-1 text-5xl font-semibold tracking-tight">
-            {fmt(t.calories)}
+            {fmt(active.calories)}
             <span className="ml-1 text-lg font-medium opacity-80">kcal/day</span>
           </p>
           <p className="mt-3 text-sm opacity-90">
@@ -98,9 +107,9 @@ function Targets({ t }: { t: NutritionTargets }) {
             <div className="bg-fat" style={{ width: `${pct(fatKcal)}%` }} />
           </div>
           <dl className="mt-4 grid grid-cols-3 gap-3">
-            <Macro name="Protein" grams={t.proteinG} share={pct(proteinKcal)} color="bg-protein" />
-            <Macro name="Carbs" grams={t.carbsG} share={pct(carbsKcal)} color="bg-carbs" />
-            <Macro name="Fat" grams={t.fatG} share={100 - pct(proteinKcal) - pct(carbsKcal)} color="bg-fat" />
+            <Macro name="Protein" grams={active.proteinG} share={pct(proteinKcal)} color="bg-protein" />
+            <Macro name="Carbs" grams={active.carbsG} share={pct(carbsKcal)} color="bg-carbs" />
+            <Macro name="Fat" grams={active.fatG} share={100 - pct(proteinKcal) - pct(carbsKcal)} color="bg-fat" />
           </dl>
           <p className="mt-4 text-sm text-muted">
             Protein range for your goal: {fmt(t.proteinRangeG.min)} to {fmt(t.proteinRangeG.max)} g.
@@ -109,7 +118,7 @@ function Targets({ t }: { t: NutritionTargets }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Stat label="Fibre" value={`${fmt(t.fibreG)} g`} note="At least" />
+        <Stat label="Fibre" value={`${fmt(active.fibreG)} g`} note="At least" />
         <Stat label="Water" value={`${(t.water.baseMl / 1000).toFixed(1)} L`} note={`Plus ${fmt(t.water.perTrainingHourMl.min)}–${fmt(t.water.perTrainingHourMl.max)} ml per training hour`} />
         <Stat label="Maintenance (TDEE)" value={`${fmt(t.tdee.value)} kcal`} note={`Likely ${fmt(t.tdee.range.min)}–${fmt(t.tdee.range.max)}. Estimate`} />
         <Stat

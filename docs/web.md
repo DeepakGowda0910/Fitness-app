@@ -13,10 +13,11 @@ follow the device setting.
 | `/assessment` | Six steps: about you, activity, goal, health check, food, review. Resumes at the first unanswered step |
 | `/results` | Calories, macros, fibre, water, maintenance and resting energy, safety notices, and how each number was worked out |
 | `/plan` | 7-day Indian diet plan sized to the targets: day tabs, meals with raw-ingredient grams and household units, day totals against targets, "Swap this dish" and "Shuffle dishes" |
+| `/checkin` | Log weigh-ins (with a smoothed trend chart) and a weekly check-in: days followed, adherence, hunger, energy, sleep. The engine decides whether calories change; the new targets flow to `/results` and `/plan`. One check-in per week; protein never changes |
 
-Targets and the diet plan are calculated in the browser by `@fitness/calc-engine` and `@fitness/meal-planner`, the same
+Targets, check-in decisions and the diet plan are calculated in the browser by `@fitness/calc-engine` and `@fitness/meal-planner`, the same
 deterministic code the API uses, so no account or server is needed yet.
-Answers are kept in this browser's local storage until Supabase sign-in is
+Answers, weigh-ins and check-ins are kept in this browser's local storage (check-ins reset if the assessment changes) until Supabase sign-in is
 connected; then they will be saved through the API.
 
 `lib/assessment.ts` holds step validation and the mapping to the engine's

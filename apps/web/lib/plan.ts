@@ -24,13 +24,13 @@ export function localToday(now: Date = new Date()): string {
 }
 
 export function planRequestOf(
-  targets: NutritionTargets,
+  targets: DayTargets,
   draft: AssessmentDraft,
   settings: PlanSettings,
   startDate: string,
 ): PlanRequest {
   return {
-    targets: dayTargetsOf(targets),
+    targets,
     dietType: draft.dietType ?? 'vegetarian',
     allergies: draft.allergies ?? [],
     excludeDishIds: settings.excludeDishIds,
