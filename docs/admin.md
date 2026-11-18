@@ -2,7 +2,7 @@
 
 A separate Next.js app for admins, published by the same GitHub Pages
 workflow at `<site>/admin/` (for this repo,
-`https://deepakgowda0910.github.io/Fitness-app/admin/`). The user app has no
+`https://deepakgowda0910.github.io/Fitness-app/admin/`, or `/admin/` on the Cloudflare link: see [hosting.md](hosting.md)). The user app has no
 link to it.
 
 - **Its own sign-in.** Email link, like the app, but it never creates
