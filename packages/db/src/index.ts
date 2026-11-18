@@ -12,3 +12,4 @@ export {
   type ReferenceFoodInput,
   type ReferenceSource,
 } from './seed-foods.js';
+export { migrationsFolder, SUPABASE_TEST_SHIM_SQL, SUPABASE_TEST_GRANTS_SQL } from './testing.js';

@@ -1,0 +1,37 @@
+{
+  "name": "@fitness/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "REST API (NestJS). Verifies Supabase sign-in and runs every user query under row-level security.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fitness/calc-engine": "workspace:*",
+    "@fitness/db": "workspace:*",
+    "@fitness/meal-planner": "workspace:*",
+    "@nestjs/common": "^12.5.1",
+    "@nestjs/core": "^12.5.1",
+    "@nestjs/platform-express": "^12.5.1",
+    "drizzle-orm": "^0.45.4",
+    "jose": "^6.2.17",
+    "postgres": "^4.1.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@nestjs/testing": "^12.5.1",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/supertest": "^6.0.0",
+    "supertest": "^7.3.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}

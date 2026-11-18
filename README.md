@@ -14,7 +14,7 @@ pnpm + Turborepo monorepo.
 | `packages/food-data` | Indian Food Composition Tables 2017 (542 foods) as typed JSON, with search by English and Indian names. See [data/NOTICE.md](packages/food-data/data/NOTICE.md) for licence status. |
 | `packages/meal-planner` | Starter Indian dish catalogue and the 7-day diet plan generator. See [docs/meal-plan.md](docs/meal-plan.md). |
 | `apps/web` | Next.js PWA (coming next) |
-| `apps/api` | NestJS API (coming next) |
+| `apps/api` | NestJS API: Supabase sign-in check, account, and endpoints for targets, 7-day diet plan and check-in assessment. See [docs/api.md](docs/api.md). |
 
 ## Develop
 

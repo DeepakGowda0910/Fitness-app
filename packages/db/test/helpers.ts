@@ -1,35 +1,14 @@
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
-import { schema } from '../src/index.js';
-
-/**
- * Minimal stand-in for what Supabase provides before our migrations run:
- * the auth schema with auth.uid(), and the anon/authenticated roles.
- * Supabase's real auth.uid() also reads the `sub` claim of request.jwt.claims.
- */
-const SUPABASE_SHIM = `
-  CREATE ROLE anon NOLOGIN;
-  CREATE ROLE authenticated NOLOGIN;
-  CREATE SCHEMA auth;
-  GRANT USAGE ON SCHEMA auth TO anon, authenticated;
-  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
-    SELECT nullif(current_setting('request.jwt.claims', true)::jsonb ->> 'sub', '')::uuid
-  $$;
-`;
-
-/** Supabase's default privileges grant table access to these roles; RLS then filters rows. */
-const SUPABASE_GRANTS = `
-  GRANT USAGE ON SCHEMA public TO anon, authenticated;
-  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
-`;
+import { migrationsFolder, schema, SUPABASE_TEST_GRANTS_SQL, SUPABASE_TEST_SHIM_SQL } from '../src/index.js';
 
 export async function freshDb() {
   const client = new PGlite();
-  await client.exec(SUPABASE_SHIM);
+  await client.exec(SUPABASE_TEST_SHIM_SQL);
   const db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: new URL('../migrations', import.meta.url).pathname });
-  await client.exec(SUPABASE_GRANTS);
+  await migrate(db, { migrationsFolder });
+  await client.exec(SUPABASE_TEST_GRANTS_SQL);
   return db;
 }
 
