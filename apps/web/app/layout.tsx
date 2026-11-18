@@ -33,11 +33,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               Fitness
             </Link>
             <nav className="flex items-center gap-1 text-sm">
-              <Link href="/assessment" className="rounded-lg px-3 py-2 text-muted hover:bg-surface-2 hover:text-text">
-                Assessment
+              <Link href="/assessment" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+                <span className="sm:hidden">Start</span>
+                <span className="hidden sm:inline">Assessment</span>
               </Link>
-              <Link href="/results" className="rounded-lg px-3 py-2 text-muted hover:bg-surface-2 hover:text-text">
-                My targets
+              <Link href="/results" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+                Targets
+              </Link>
+              <Link href="/plan" className="rounded-lg px-2 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
+                Diet plan
               </Link>
             </nav>
           </div>

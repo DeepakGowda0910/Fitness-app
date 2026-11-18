@@ -1,43 +1,30 @@
 'use client';
 
-import { computeTargets, type NutritionTargets } from '@fitness/calc-engine';
+import type { NutritionTargets } from '@fitness/calc-engine';
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { toTargetsInput, validateStep } from '@/lib/assessment';
 import { GOALS, labelOf } from '@/lib/labels';
-import { useAssessmentDraft } from '@/lib/storage';
+import { useTargets } from '@/lib/targets';
 import { Notice } from './fields';
 
 const fmt = (n: number) => Math.round(n).toLocaleString('en-IN');
 
 export function ResultsView() {
-  const { draft, ready } = useAssessmentDraft();
+  const state = useTargets();
+  if (state.status === 'loading') return <div className="h-96 animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
+  if (state.status === 'incomplete') return <NoTargets started={Object.keys(state.draft).length > 0} />;
+  return <Targets t={state.targets} />;
+}
 
-  const result = useMemo((): { targets: NutritionTargets } | { error: string } | null => {
-    if (!ready) return null;
-    if (Object.keys(validateStep('review', draft)).length > 0) return { error: 'incomplete' };
-    try {
-      return { targets: computeTargets(toTargetsInput(draft)) };
-    } catch {
-      return { error: 'invalid' };
-    }
-  }, [draft, ready]);
-
-  if (!result) return <div className="h-96 animate-pulse rounded-2xl bg-surface-2" aria-label="Loading" />;
-
-  if ('error' in result) {
-    return (
-      <div className="mx-auto max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-semibold">No targets yet</h1>
-        <p className="mt-2 text-muted">Answer a few questions and we&apos;ll work out your calories and macros.</p>
-        <Link href="/assessment" className="mt-6 inline-flex h-12 items-center rounded-xl bg-brand px-6 font-semibold text-on-brand">
-          {Object.keys(draft).length > 0 ? 'Finish the assessment' : 'Start the assessment'}
-        </Link>
-      </div>
-    );
-  }
-
-  return <Targets t={result.targets} />;
+export function NoTargets({ started }: { started: boolean }) {
+  return (
+    <div className="mx-auto max-w-lg rounded-2xl border border-border bg-surface p-8 text-center shadow-sm">
+      <h1 className="text-2xl font-semibold">No targets yet</h1>
+      <p className="mt-2 text-muted">Answer a few questions and we&apos;ll work out your calories and macros.</p>
+      <Link href="/assessment" className="mt-6 inline-flex h-12 items-center rounded-xl bg-brand px-6 font-semibold text-on-brand">
+        {started ? 'Finish the assessment' : 'Start the assessment'}
+      </Link>
+    </div>
+  );
 }
 
 function Targets({ t }: { t: NutritionTargets }) {
@@ -157,14 +144,17 @@ function Targets({ t }: { t: NutritionTargets }) {
           </p>
         </section>
 
-        <section className="flex flex-col justify-between rounded-2xl border border-dashed border-border bg-surface-2 p-6">
+        <section className="flex flex-col justify-between rounded-2xl border border-border bg-surface p-6 shadow-sm">
           <div>
             <h2 className="font-semibold">Your 7-day diet plan</h2>
-            <p className="mt-2 text-sm text-muted">Indian meals sized to these targets, for your diet and allergies. Coming in the next update.</p>
+            <p className="mt-2 text-sm text-muted">Indian meals with every quantity sized to these targets, for your diet and allergies.</p>
           </div>
-          <span className="mt-4 inline-flex h-11 w-fit items-center rounded-xl border border-border px-5 text-sm font-medium text-muted">
-            Coming soon
-          </span>
+          <Link
+            href="/plan"
+            className="mt-4 inline-flex h-11 w-fit items-center rounded-xl bg-brand px-5 text-sm font-semibold text-on-brand hover:bg-brand-strong"
+          >
+            See my diet plan
+          </Link>
         </section>
       </div>
 
