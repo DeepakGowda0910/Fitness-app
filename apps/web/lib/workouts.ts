@@ -33,6 +33,7 @@ export function programRequestOf(d: AssessmentDraft): ProgramRequest | null {
     experience: d.experience ?? 'beginner',
     goal: d.goal ?? 'maintenance',
     equipment: d.equipment ?? 'gym',
+    ...(d.split ? { split: d.split } : {}),
   };
 }
 

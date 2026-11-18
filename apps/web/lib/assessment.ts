@@ -1,8 +1,8 @@
 import { targetsInputSchema, type TargetsInput } from '@fitness/calc-engine';
 import type { Allergen, DietType } from '@fitness/meal-planner';
-import type { Equipment } from '@fitness/workout-planner';
+import type { Equipment, SplitStyle } from '@fitness/workout-planner';
 
-export type { Equipment };
+export type { Equipment, SplitStyle };
 
 export type Sex = 'male' | 'female';
 export type Occupation = 'sedentary' | 'light' | 'moderate' | 'heavy';
@@ -35,6 +35,8 @@ export interface AssessmentDraft {
   experience?: Experience | undefined;
   /** Where the user trains, for the workout plan. Optional: answers saved before it existed have none. */
   equipment?: Equipment | undefined;
+  /** Workout plan style chosen on the workouts screen; none means the recommended one. */
+  split?: SplitStyle | undefined;
 
   goal?: Goal | undefined;
   weeklyRatePct?: number | undefined;

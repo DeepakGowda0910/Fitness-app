@@ -7,6 +7,9 @@ import {
   nextDayIndex,
   PREFERENCE,
   ProgramError,
+  recommendedSplit,
+  splitStylesFor,
+  type SplitStyle,
   suggestNext,
   type Equipment,
   type Experience,
@@ -100,6 +103,47 @@ describe('generateProgram', () => {
   it('rejects impossible answers', () => {
     expect(() => generateProgram({ ...base, daysPerWeek: 0 })).toThrow(ProgramError);
     expect(() => generateProgram({ ...base, sessionMinutes: 5 })).toThrow(ProgramError);
+  });
+});
+
+describe('choosing a plan style', () => {
+  const STYLES: SplitStyle[] = ['full_body', 'upper_lower', 'ppl'];
+
+  it('offers full body always, upper/lower from 2 days and push/pull/legs from 3', () => {
+    expect(splitStylesFor(1)).toEqual(['full_body']);
+    expect(splitStylesFor(2)).toEqual(['full_body', 'upper_lower']);
+    expect(splitStylesFor(3)).toEqual(STYLES);
+  });
+
+  it('builds every offered style for every number of days, with unique day keys', () => {
+    for (let days = 1; days <= 6; days++)
+      for (const split of splitStylesFor(days)) {
+        const p = generateProgram({ ...base, daysPerWeek: days, split });
+        expect(p.style).toBe(split);
+        expect(p.days).toHaveLength(days);
+        expect(new Set(p.days.map((d) => d.key)).size).toBe(days);
+      }
+  });
+
+  it('gives different day types for each style', () => {
+    const names = (split: SplitStyle) => generateProgram({ ...base, daysPerWeek: 3, split }).days.map((d) => d.name);
+    expect(names('full_body')).toEqual(['Full body A', 'Full body B', 'Full body C']);
+    expect(names('upper_lower')).toEqual(['Upper A', 'Lower A', 'Upper B']);
+    expect(names('ppl')).toEqual(['Push', 'Pull', 'Legs']);
+  });
+
+  it('falls back to the recommended style, with a note, when the choice needs more days', () => {
+    const p = generateProgram({ ...base, daysPerWeek: 2, split: 'ppl' });
+    expect(p.style).toBe('full_body');
+    expect(p.notes.join(' ')).toMatch(/needs at least 3/);
+  });
+
+  it('recommends full body for beginners and short weeks', () => {
+    expect(recommendedSplit(3, 'beginner')).toBe('full_body');
+    expect(recommendedSplit(3, 'advanced')).toBe('ppl');
+    expect(recommendedSplit(4, 'intermediate')).toBe('upper_lower');
+    expect(recommendedSplit(6, 'intermediate')).toBe('ppl');
+    expect(generateProgram({ ...base, daysPerWeek: 3 }).style).toBe('full_body');
   });
 });
 

@@ -19,6 +19,7 @@ const SECTION: Record<keyof AssessmentDraft, StepId> = {
   sessionMinutes: 'activity',
   experience: 'activity',
   equipment: 'activity',
+  split: 'activity',
   goal: 'goal',
   weeklyRatePct: 'goal',
   pregnant: 'health',
