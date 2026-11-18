@@ -18,7 +18,7 @@ describe('supabase/setup.sql', () => {
     expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
   });
 
-  it('turns on row-level security for every table (including Drizzle's bookkeeping), and gives signed-out visitors nothing', async () => {
+  it('turns on row-level security for every table (including Drizzle bookkeeping), and gives signed-out visitors nothing', async () => {
     const client = new PGlite();
     await client.exec(SUPABASE_TEST_SHIM_SQL);
     await client.exec(setupSql);
