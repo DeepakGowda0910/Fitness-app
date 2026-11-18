@@ -1,4 +1,3 @@
-import { computeTargets } from '@fitness/calc-engine';
 import { allFoods } from '@fitness/food-data';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
@@ -15,16 +14,9 @@ import {
 
 const codes = new Set(allFoods().map((f) => f.code));
 
-// Case A from docs/calc-engine.md: male, 80 kg, fat loss → 2410 kcal, P160 C292 F67, fibre 34.
-const caseA = computeTargets({
-  sex: 'male',
-  ageYears: 30,
-  heightCm: 180,
-  weightKg: 80,
-  activity: { occupation: 'sedentary', avgDailySteps: 8000, trainingDaysPerWeek: 4, sessionMinutes: 60 },
-  goal: 'fat_loss',
-});
-const targetsA = { calories: caseA.calories, proteinG: caseA.proteinG, carbsG: caseA.carbsG, fatG: caseA.fatG, fibreG: caseA.fibreG };
+// Fixed planner fixture: case A's targets under policy 2026.11.2 (male, 80 kg, fat loss).
+// Pinned here so planner tests don't move when calorie policy changes.
+const targetsA = { calories: 2410, proteinG: 160, carbsG: 292, fatG: 67, fibreG: 34 };
 
 const request = (over: Partial<PlanRequest> = {}): PlanRequest => ({
   targets: targetsA,

@@ -63,7 +63,7 @@ describe('schema', () => {
         reason: 'initial',
       })
       .returning();
-    expect(row!.calories).toBe(2410);
+    expect(row!.calories).toBe(t.calories);
     expect((row!.inputsSnapshot as { weightKg: number }).weightKg).toBe(80);
   });
 

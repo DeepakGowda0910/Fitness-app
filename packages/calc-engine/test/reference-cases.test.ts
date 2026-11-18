@@ -35,15 +35,24 @@ describe('Katch-McArdle', () => {
 });
 
 describe('activity factor', () => {
-  it('8,000 steps + 4 × 60 min training = 1.4 + 0.2 = 1.6', () => {
+  it('8,000 steps + 4 × 60 min training = 1.375 + 0.12 = 1.495', () => {
     const r = computeActivityFactor({ occupation: 'sedentary', avgDailySteps: 8000, trainingDaysPerWeek: 4, sessionMinutes: 60 });
-    expect(r.factor).toBe(1.6);
+    expect(r.factor).toBe(1.495);
     expect(r.baseSource).toBe('steps');
   });
   it('falls back to occupation and records the assumption', () => {
     const r = computeActivityFactor({ occupation: 'light', trainingDaysPerWeek: 0 });
     expect(r.factor).toBe(1.3);
     expect(r.assumptions.map((a) => a.code)).toContain('activity_from_occupation');
+  });
+  it('a very active week (12,500+ steps, 6 × 60 min) stays well below the cap: 1.5 + 0.18 = 1.68', () => {
+    // Policy 2026.11.2 gave 1.6 + 0.3 = 1.9 here, about 15% above typical calculators.
+    const r = computeActivityFactor({ occupation: 'sedentary', avgDailySteps: 14000, trainingDaysPerWeek: 6, sessionMinutes: 60 });
+    expect(r.factor).toBe(1.68);
+  });
+  it('steps alone never go above 1.5', () => {
+    const r = computeActivityFactor({ occupation: 'sedentary', avgDailySteps: 30000, trainingDaysPerWeek: 0 });
+    expect(r.factor).toBe(1.5);
   });
   it('is capped at 1.9', () => {
     const r = computeActivityFactor({ occupation: 'heavy', avgDailySteps: 20000, trainingDaysPerWeek: 7, sessionMinutes: 120 });
@@ -61,20 +70,20 @@ describe('computeTargets: case A, male fat loss', () => {
     goal: 'fat_loss',
   });
 
-  it('BMR 1780, TDEE 2848 (±10%)', () => {
+  it('BMR 1780, TDEE 2661 (±10%)', () => {
     expect(t.bmr.value).toBe(1780);
-    expect(t.tdee.value).toBe(2848);
-    expect(t.tdee.range).toEqual({ min: 2563, max: 3133 });
+    expect(t.tdee.value).toBe(2661);
+    expect(t.tdee.range).toEqual({ min: 2395, max: 2927 });
   });
-  it('0.5%/week deficit of 440 kcal → 2410 kcal', () => {
-    expect(t.calories).toBe(2410);
-    expect(t.dailyDeficitKcal).toBe(438);
+  it('0.5%/week deficit of 440 kcal → 2230 kcal', () => {
+    expect(t.calories).toBe(2230);
+    expect(t.dailyDeficitKcal).toBe(431);
   });
-  it('macros P160 / F67 / C292, fibre 34 g, water 2800 ml', () => {
+  it('macros P160 / F62 / C258, fibre 31 g, water 2800 ml', () => {
     expect(t.proteinG).toBe(160);
-    expect(t.fatG).toBe(67);
-    expect(t.carbsG).toBe(292);
-    expect(t.fibreG).toBe(34);
+    expect(t.fatG).toBe(62);
+    expect(t.carbsG).toBe(258);
+    expect(t.fibreG).toBe(31);
     expect(t.water.baseMl).toBe(2800);
   });
   it('macros add up to the calorie target', () => {
