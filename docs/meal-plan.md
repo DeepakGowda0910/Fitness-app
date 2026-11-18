@@ -28,9 +28,11 @@ Energy uses 4/4/9 kcal per g of protein, carbs and fat, the same as the targets.
 
 ## Known limits (starter catalogue)
 
-- 35 dishes, raw weights only; cooked weights and katori/bowl sizes come with
+- 40 dishes, raw weights only; cooked weights and katori/bowl sizes come with
   the cooking-yield table.
-- IFCT 2017 has no curd, whey, tofu or soya chunks. Very high protein targets
-  (about 2 g/kg) are met on non-vegetarian plans but typically reach 85–95% on
-  vegetarian and lower on vegan plans; the plan says so.
+- Foods come from IFCT 2017 plus four USDA foods IFCT lacks: curd (whole and
+  low fat), firm tofu and soya chunks.
+- Case A (2,410 kcal, 160 g protein): non-veg, vegetarian and Jain plans with
+  4–5 meals meet every target on 6–7 of 7 days. Three-meal and vegan plans
+  often fall short on protein; the plan says so on the day and for the week.
 - Dish recipes and ranges are drafts for dietitian review.

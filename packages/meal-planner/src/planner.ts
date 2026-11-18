@@ -8,7 +8,7 @@ import {
   type SolverItem,
   type ToleranceCheck,
 } from '@fitness/calc-engine';
-import { ifct2017, type ReferenceFood } from '@fitness/food-data';
+import { allFoods, type ReferenceFood } from '@fitness/food-data';
 import { adaptDish, type Allergen, type DietType } from './classify.js';
 import { DISHES, type Dish, type MealSlot } from './dishes.js';
 
@@ -77,7 +77,7 @@ const CANDIDATES_PER_DAY = 16;
  * nutrition always come from here.
  */
 export function generateWeekPlan(request: PlanRequest, dishes: readonly Dish[] = DISHES): WeekPlan {
-  const foods = new Map(ifct2017().foods.map((f) => [f.code, f]));
+  const foods = new Map(allFoods().map((f) => [f.code, f]));
   const allergies = new Set(request.allergies ?? []);
   const excluded = new Set(request.excludeDishIds ?? []);
   const slots = SLOTS_BY_MEALS[request.mealsPerDay];

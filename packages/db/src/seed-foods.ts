@@ -29,24 +29,46 @@ const NUTRIENT_CODES = {
 
 type NutrientField = keyof typeof NUTRIENT_CODES;
 
+export interface ReferenceSource {
+  code: 'IFCT_2017' | 'USDA_FDC';
+  name: string;
+  licence: string;
+}
+
+export const IFCT_2017_SOURCE: ReferenceSource = {
+  code: 'IFCT_2017',
+  name: 'Indian Food Composition Tables 2017 (ICMR-NIN)',
+  licence: 'ICMR-NIN; personal use, commercial use to be confirmed',
+};
+
+export const USDA_FDC_SOURCE: ReferenceSource = {
+  code: 'USDA_FDC',
+  name: 'USDA FoodData Central',
+  licence: 'Public domain (CC0)',
+};
+
+/** Imports IFCT 2017 foods. */
+export function seedIfct2017(
+  db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>,
+  dataset: { version: string; foods: readonly ReferenceFoodInput[] },
+): Promise<number> {
+  return seedReferenceFoods(db, IFCT_2017_SOURCE, dataset);
+}
+
 /**
- * Imports (or re-imports) IFCT 2017 foods. Idempotent: existing foods are
- * updated in place by (source, code) and their nutrients replaced.
+ * Imports (or re-imports) one source's reference foods. Idempotent: existing
+ * foods are updated in place by (source, code) and their nutrients replaced.
  * Run with the service role.
  */
-export async function seedIfct2017(
+export async function seedReferenceFoods(
   db: PgDatabase<PgQueryResultHKT, Record<string, unknown>>,
+  sourceInfo: ReferenceSource,
   dataset: { version: string; foods: readonly ReferenceFoodInput[] },
 ): Promise<number> {
   return db.transaction(async (tx) => {
     const [source] = await tx
       .insert(foodSources)
-      .values({
-        code: 'IFCT_2017',
-        name: 'Indian Food Composition Tables 2017 (ICMR-NIN)',
-        version: dataset.version,
-        licence: 'ICMR-NIN; personal use, commercial use to be confirmed',
-      })
+      .values({ code: sourceInfo.code, name: sourceInfo.name, version: dataset.version, licence: sourceInfo.licence })
       .onConflictDoUpdate({ target: foodSources.code, set: { version: dataset.version } })
       .returning();
 

@@ -28,7 +28,7 @@ export interface ReferenceFood {
 }
 
 export interface FoodDataset {
-  source: 'IFCT_2017';
+  source: 'IFCT_2017' | 'USDA_FDC';
   version: string;
   foods: ReferenceFood[];
 }
@@ -45,6 +45,22 @@ export function ifct2017(): FoodDataset {
   return cache;
 }
 
+let usdaCache: FoodDataset | undefined;
+
+/**
+ * Foods missing from IFCT 2017 (curd, tofu, soya chunks), from USDA FoodData
+ * Central SR Legacy (public domain). Codes are "USDA:<fdcId>".
+ */
+export function usdaSupplement(): FoodDataset {
+  usdaCache ??= JSON.parse(readFileSync(new URL('../data/usda-sr-legacy.json', import.meta.url), 'utf8')) as FoodDataset;
+  return usdaCache;
+}
+
+/** Every reference food the app uses: IFCT 2017 first, then the USDA supplement. */
+export function allFoods(): ReferenceFood[] {
+  return [...ifct2017().foods, ...usdaSupplement().foods];
+}
+
 /**
  * Energy from macros with the same factors the targets use (4/4/9), so plans
  * and targets add up the same way. Fibre energy is not counted.
@@ -54,7 +70,7 @@ export function energyFromMacros(n: Pick<FoodNutrientsPer100g, 'proteinG' | 'car
 }
 
 /** Case-insensitive search over English and local names. Exact and prefix matches rank first. */
-export function searchFoods(query: string, foods: readonly ReferenceFood[] = ifct2017().foods, limit = 20): ReferenceFood[] {
+export function searchFoods(query: string, foods: readonly ReferenceFood[] = allFoods(), limit = 20): ReferenceFood[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const scored: { food: ReferenceFood; score: number }[] = [];

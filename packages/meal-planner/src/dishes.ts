@@ -1,5 +1,6 @@
 /**
- * Starter set of everyday Indian dishes, built only from IFCT 2017 foods.
+ * Starter set of everyday Indian dishes, built from IFCT 2017 foods plus a few
+ * USDA foods IFCT lacks (curd, tofu, soya chunks).
  *
  * Quantities are raw / dry weights in grams. Each ingredient has a range and
  * a step; the solver picks the quantity. Vegetables and aromatics are usually
@@ -37,7 +38,7 @@ const fixed = (code: string, grams: number): DishIngredient => ({ code, minG: gr
 const ROTI = { label: 'roti', gramsPerUnit: 30 };
 const EGG = { label: 'egg', gramsPerUnit: 50 };
 
-// IFCT codes used below, for readability.
+// Food codes used below, for readability (IFCT 2017 unless prefixed USDA:).
 const RICE = 'A015';
 const RICE_FLAKES = 'A011';
 const SEMOLINA = 'A022';
@@ -80,6 +81,10 @@ const ROHU = 'S006';
 const COCONUT_OIL = 'T001';
 const GROUNDNUT_OIL = 'T005';
 const MUSTARD_OIL = 'T006';
+const CURD = 'USDA:171284';
+const CURD_LOW_FAT = 'USDA:170886';
+const TOFU = 'USDA:172475';
+const SOYA_CHUNKS = 'USDA:174275';
 const GHEE = 'T013';
 
 export const DISHES: readonly Dish[] = [
@@ -145,7 +150,7 @@ export const DISHES: readonly Dish[] = [
     name: 'Paneer paratha',
     slots: ['breakfast'],
     region: 'North',
-    ingredients: [flex(ATTA, 60, 120, 30, ROTI), flex(PANEER, 40, 100, 10), flex(GHEE, 5, 10, 5)],
+    ingredients: [flex(ATTA, 60, 120, 30, ROTI), flex(PANEER, 40, 100, 10), flex(GHEE, 5, 10, 5), flex(CURD, 0, 150, 50)],
   },
 
   {
@@ -162,12 +167,19 @@ export const DISHES: readonly Dish[] = [
     ingredients: [flex(PANEER, 80, 200, 10), flex(ATTA, 30, 90, 30, ROTI), fixed(ONION, 30), fixed(TOMATO, 40), fixed(CAPSICUM, 40), flex(GROUNDNUT_OIL, 5, 10, 5)],
   },
 
+  {
+    id: 'tofu_bhurji_roti',
+    name: 'Tofu bhurji with roti',
+    slots: ['breakfast', 'dinner'],
+    ingredients: [flex(TOFU, 100, 250, 25), flex(ATTA, 30, 90, 30, ROTI), fixed(ONION, 30), fixed(TOMATO, 40), fixed(CAPSICUM, 40), flex(GROUNDNUT_OIL, 5, 10, 5)],
+  },
+
   // ---- Lunch and dinner ----
   {
     id: 'dal_rice_sabzi',
     name: 'Toor dal, rice and cauliflower sabzi',
     slots: ['lunch', 'dinner'],
-    ingredients: [flex(RICE, 50, 120, 10), flex(TOOR_DAL, 30, 90, 10), fixed(CAULIFLOWER, 100), fixed(TOMATO, 40), fixed(ONION, 30), flex(GROUNDNUT_OIL, 5, 15, 5)],
+    ingredients: [flex(RICE, 50, 120, 10), flex(TOOR_DAL, 30, 90, 10), fixed(CAULIFLOWER, 100), fixed(TOMATO, 40), fixed(ONION, 30), flex(GROUNDNUT_OIL, 5, 15, 5), flex(CURD, 0, 150, 50)],
   },
   {
     id: 'rajma_chawal',
@@ -195,13 +207,13 @@ export const DISHES: readonly Dish[] = [
     name: 'Sambar rice with okra poriyal',
     slots: ['lunch', 'dinner'],
     region: 'South',
-    ingredients: [flex(TOOR_DAL, 30, 60, 10), flex(RICE, 50, 120, 10), fixed(OKRA, 80), fixed(PUMPKIN, 50), fixed(TOMATO, 40), fixed(ONION, 30), flex(COCONUT_OIL, 5, 10, 5)],
+    ingredients: [flex(TOOR_DAL, 30, 60, 10), flex(RICE, 50, 120, 10), fixed(OKRA, 80), fixed(PUMPKIN, 50), fixed(TOMATO, 40), fixed(ONION, 30), flex(COCONUT_OIL, 5, 10, 5), flex(CURD, 0, 150, 50)],
   },
   {
     id: 'moong_khichdi',
     name: 'Moong dal khichdi',
     slots: ['lunch', 'dinner'],
-    ingredients: [flex(RICE, 40, 90, 10), flex(MOONG_DAL, 30, 70, 10), fixed(PEAS, 30), fixed(CARROT, 40), flex(GHEE, 5, 10, 5)],
+    ingredients: [flex(RICE, 40, 90, 10), flex(MOONG_DAL, 30, 70, 10), fixed(PEAS, 30), fixed(CARROT, 40), flex(GHEE, 5, 10, 5), flex(CURD, 0, 150, 50)],
   },
   {
     id: 'ragi_mudde_saaru',
@@ -221,7 +233,19 @@ export const DISHES: readonly Dish[] = [
     id: 'soya_pulao',
     name: 'Soya and vegetable pulao',
     slots: ['lunch', 'dinner'],
-    ingredients: [flex(SOYA, 30, 80, 10), flex(RICE, 50, 100, 10), fixed(PEAS, 30), fixed(CARROT, 30), fixed(ONION, 30), flex(GROUNDNUT_OIL, 5, 10, 5)],
+    ingredients: [flex(SOYA_CHUNKS, 20, 60, 10), flex(RICE, 50, 100, 10), fixed(PEAS, 30), fixed(CARROT, 30), fixed(ONION, 30), flex(GROUNDNUT_OIL, 5, 10, 5)],
+  },
+  {
+    id: 'soya_chunk_curry_rice',
+    name: 'Soya chunk curry with rice',
+    slots: ['lunch', 'dinner'],
+    ingredients: [flex(SOYA_CHUNKS, 30, 80, 10), flex(RICE, 50, 120, 10), fixed(ONION, 40), fixed(TOMATO, 50), flex(GROUNDNUT_OIL, 5, 10, 5)],
+  },
+  {
+    id: 'tofu_palak_roti',
+    name: 'Tofu palak with roti',
+    slots: ['lunch', 'dinner'],
+    ingredients: [fixed(SPINACH, 150), flex(TOFU, 100, 250, 25), flex(ATTA, 60, 120, 30, ROTI), fixed(ONION, 30), fixed(TOMATO, 30), flex(GROUNDNUT_OIL, 5, 10, 5)],
   },
   {
     id: 'chicken_curry_rice',
@@ -318,6 +342,18 @@ export const DISHES: readonly Dish[] = [
     name: 'Chicken tikka',
     slots: ['evening'],
     ingredients: [flex(CHICKEN_BREAST, 100, 200, 25), fixed(ONION, 30), flex(GROUNDNUT_OIL, 0, 5, 5)],
+  },
+  {
+    id: 'curd_fruit_bowl',
+    name: 'Curd with banana and almonds',
+    slots: ['mid_morning', 'evening'],
+    ingredients: [flex(CURD_LOW_FAT, 150, 300, 50), flex(BANANA, 0, 100, 50), flex(ALMOND, 0, 15, 5)],
+  },
+  {
+    id: 'soya_chunk_chaat',
+    name: 'Soya chunk chaat',
+    slots: ['evening'],
+    ingredients: [flex(SOYA_CHUNKS, 20, 50, 10), fixed(ONION, 20), fixed(TOMATO, 30), fixed(CUCUMBER, 50)],
   },
   {
     id: 'boiled_eggs',
