@@ -28,7 +28,7 @@ Energy uses 4/4/9 kcal per g of protein, carbs and fat, the same as the targets.
 
 ## Known limits (starter catalogue)
 
-- 34 dishes, raw weights only; cooked weights and katori/bowl sizes come with
+- 35 dishes, raw weights only; cooked weights and katori/bowl sizes come with
   the cooking-yield table.
 - IFCT 2017 has no curd, whey, tofu or soya chunks. Very high protein targets
   (about 2 g/kg) are met on non-vegetarian plans but typically reach 85–95% on
