@@ -35,9 +35,11 @@ describe('Katch-McArdle', () => {
 });
 
 describe('activity factor', () => {
-  it('8,000 steps + 4 × 60 min training = 1.375 + 0.12 = 1.495', () => {
+  it('8,000 steps + 4 × 60 min training = 1.35 + 0.12 = 1.47', () => {
     const r = computeActivityFactor({ occupation: 'sedentary', avgDailySteps: 8000, trainingDaysPerWeek: 4, sessionMinutes: 60 });
-    expect(r.factor).toBe(1.495);
+    expect(r.baseFactor).toBe(1.35);
+    expect(r.trainingAddition).toBe(0.12);
+    expect(r.factor).toBe(1.47);
     expect(r.baseSource).toBe('steps');
   });
   it('falls back to occupation and records the assumption', () => {
@@ -45,18 +47,26 @@ describe('activity factor', () => {
     expect(r.factor).toBe(1.3);
     expect(r.assumptions.map((a) => a.code)).toContain('activity_from_occupation');
   });
-  it('a very active week (12,500+ steps, 6 × 60 min) stays well below the cap: 1.5 + 0.18 = 1.68', () => {
-    // Policy 2026.11.2 gave 1.6 + 0.3 = 1.9 here, about 15% above typical calculators.
+  it('a very active week (14,000 steps, 6 × 60 min) = 1.53 + 0.18 = 1.71', () => {
+    // Policy 2026.11.2 gave 1.9 here by over-counting both parts.
     const r = computeActivityFactor({ occupation: 'sedentary', avgDailySteps: 14000, trainingDaysPerWeek: 6, sessionMinutes: 60 });
-    expect(r.factor).toBe(1.68);
+    expect(r.factor).toBe(1.71);
   });
-  it('steps alone never go above 1.5', () => {
-    const r = computeActivityFactor({ occupation: 'sedentary', avgDailySteps: 30000, trainingDaysPerWeek: 0 });
-    expect(r.factor).toBe(1.5);
+  it('more steps always means a higher factor, with no step ceiling below the overall cap', () => {
+    const f = (steps: number) => computeActivityFactor({ occupation: 'sedentary', avgDailySteps: steps, trainingDaysPerWeek: 0 }).factor;
+    expect(f(3000)).toBe(1.2);
+    expect(f(20000)).toBe(1.71);
+    expect(f(25000)).toBeGreaterThan(f(20000));
   });
-  it('is capped at 1.9', () => {
-    const r = computeActivityFactor({ occupation: 'heavy', avgDailySteps: 20000, trainingDaysPerWeek: 7, sessionMinutes: 120 });
-    expect(r.factor).toBe(1.9);
+  it('more or longer training always means a higher factor', () => {
+    const f = (days: number, min: number) =>
+      computeActivityFactor({ occupation: 'sedentary', avgDailySteps: 8000, trainingDaysPerWeek: days, sessionMinutes: min }).factor;
+    expect(f(5, 60)).toBeGreaterThan(f(4, 60));
+    expect(f(4, 90)).toBeGreaterThan(f(4, 60));
+  });
+  it('is capped at 2.2', () => {
+    const r = computeActivityFactor({ occupation: 'heavy', avgDailySteps: 60000, trainingDaysPerWeek: 7, sessionMinutes: 240 });
+    expect(r.factor).toBe(2.2);
   });
 });
 
@@ -70,19 +80,20 @@ describe('computeTargets: case A, male fat loss', () => {
     goal: 'fat_loss',
   });
 
-  it('BMR 1780, TDEE 2661 (±10%)', () => {
+  it('BMR 1780, TDEE 2617 (±10%)', () => {
     expect(t.bmr.value).toBe(1780);
-    expect(t.tdee.value).toBe(2661);
-    expect(t.tdee.range).toEqual({ min: 2395, max: 2927 });
+    expect(t.tdee.value).toBe(2617);
+    expect(t.activity).toEqual({ factor: 1.47, baseFactor: 1.35, baseSource: 'steps', trainingAddition: 0.12 });
+    expect(t.tdee.range).toEqual({ min: 2355, max: 2879 });
   });
-  it('0.5%/week deficit of 440 kcal → 2230 kcal', () => {
-    expect(t.calories).toBe(2230);
-    expect(t.dailyDeficitKcal).toBe(431);
+  it('0.5%/week deficit of 440 kcal → 2180 kcal', () => {
+    expect(t.calories).toBe(2180);
+    expect(t.dailyDeficitKcal).toBe(437);
   });
-  it('macros P160 / F62 / C258, fibre 31 g, water 2800 ml', () => {
+  it('macros P160 / F61 / C248, fibre 31 g, water 2800 ml', () => {
     expect(t.proteinG).toBe(160);
-    expect(t.fatG).toBe(62);
-    expect(t.carbsG).toBe(258);
+    expect(t.fatG).toBe(61);
+    expect(t.carbsG).toBe(248);
     expect(t.fibreG).toBe(31);
     expect(t.water.baseMl).toBe(2800);
   });

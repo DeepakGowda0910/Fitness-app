@@ -77,8 +77,9 @@ export interface ActivityResult {
 }
 
 /**
- * Activity factor (1.2–1.9): a non-exercise base from steps (preferred) or
- * occupation, plus an addition for planned training volume.
+ * Activity factor (1.2–2.2): a non-exercise base from steps (preferred) or
+ * occupation, plus an addition for planned training volume. Each part is
+ * counted once, so more steps or more training always means more food.
  */
 export function computeActivityFactor(input: ActivityInput): ActivityResult {
   const e = policy.energy;
@@ -88,8 +89,7 @@ export function computeActivityFactor(input: ActivityInput): ActivityResult {
   let baseSource: 'steps' | 'occupation';
   if (input.avgDailySteps !== undefined) {
     const steps = input.avgDailySteps;
-    const band = e.stepsFactor.find((b) => steps < b.below);
-    baseFactor = band ? band.factor : e.activityFactor.max;
+    baseFactor = e.steps.sedentaryFactor + (Math.max(0, steps - e.steps.includedSteps) / 1000) * e.steps.perThousand;
     baseSource = 'steps';
   } else {
     baseFactor = e.occupationFactor[input.occupation];
@@ -113,7 +113,7 @@ export function computeActivityFactor(input: ActivityInput): ActivityResult {
 
   const raw = baseFactor + trainingAddition;
   const factor = round3(Math.min(e.activityFactor.max, Math.max(e.activityFactor.min, raw)));
-  return { factor, baseFactor, baseSource, trainingAddition: round3(trainingAddition), assumptions };
+  return { factor, baseFactor: round3(baseFactor), baseSource, trainingAddition: round3(trainingAddition), assumptions };
 }
 
 export interface TdeeResult {

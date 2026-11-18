@@ -85,7 +85,7 @@ describe('calc engine properties', () => {
       fc.property(profile, (p) => {
         const t = computeTargets(p);
         if (t.screening.riskLevel === 'refer') {
-          expect(t.dailyDeficitKcal).toBeLessThanOrEqual(5);
+          expect(t.dailyDeficitKcal).toBeLessThanOrEqual(0);
           expect(['fat_loss', 'recomposition']).not.toContain(t.appliedGoal);
         }
       }),
@@ -93,12 +93,22 @@ describe('calc engine properties', () => {
     );
   });
 
-  it('activity factor stays within 1.2 to 1.9', () => {
+  it('goals without a deficit never get one from rounding', () => {
+    fc.assert(
+      fc.property(profile, (p) => {
+        const t = computeTargets(p);
+        if (!['fat_loss', 'recomposition'].includes(t.appliedGoal)) expect(t.dailyDeficitKcal).toBeLessThanOrEqual(0);
+      }),
+      { numRuns: RUNS },
+    );
+  });
+
+  it('activity factor stays within 1.2 to 2.2', () => {
     fc.assert(
       fc.property(profile, (p) => {
         const t = computeTargets(p);
         expect(t.tdee.activityFactor).toBeGreaterThanOrEqual(1.2);
-        expect(t.tdee.activityFactor).toBeLessThanOrEqual(1.9);
+        expect(t.tdee.activityFactor).toBeLessThanOrEqual(2.2);
       }),
       { numRuns: RUNS },
     );

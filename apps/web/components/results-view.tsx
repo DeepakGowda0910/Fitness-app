@@ -2,7 +2,7 @@
 
 import type { DayTargets, NutritionTargets } from '@fitness/calc-engine';
 import Link from 'next/link';
-import { GOALS, labelOf } from '@/lib/labels';
+import { GOALS, OCCUPATIONS, labelOf } from '@/lib/labels';
 import { cloudEnabled, useAppData } from '@/lib/app-data';
 import { useTargets } from '@/lib/targets';
 import { Notice } from './fields';
@@ -134,7 +134,7 @@ function Targets({ t, active, adjusted }: { t: NutritionTargets; active: DayTarg
           <h2 className="font-semibold">How we worked this out</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li>
-              Activity factor {t.tdee.activityFactor.toFixed(2)} × resting energy {fmt(t.bmr.value)} kcal = maintenance {fmt(t.tdee.value)} kcal.
+              <ActivityBreakdown t={t} />
             </li>
             {t.referenceWeightKg !== t.inputs.weightKg ? (
               <li>Protein and fat are set from a reference weight of {t.referenceWeightKg} kg rather than your current weight.</li>
@@ -217,5 +217,47 @@ function SavedWhere() {
         <>Saved in this browser only.</>
       )}
     </p>
+  );
+}
+
+/** Shows how the user's own answers built their activity factor. */
+function ActivityBreakdown({ t }: { t: NutritionTargets }) {
+  const a = t.activity;
+  const { avgDailySteps, trainingDaysPerWeek, sessionMinutes, occupation } = t.inputs.activity;
+  const capped = Math.abs(a.baseFactor + a.trainingAddition - a.factor) > 0.001;
+  const rows: Array<[string, string]> = [
+    [
+      a.baseSource === 'steps'
+        ? `Daily movement: ${fmt(avgDailySteps ?? 0)} steps`
+        : `Daily movement: ${labelOf(OCCUPATIONS, occupation).toLowerCase()} (no step count)`,
+      a.baseFactor.toFixed(2),
+    ],
+    [
+      trainingDaysPerWeek > 0
+        ? `Training: ${trainingDaysPerWeek} day${trainingDaysPerWeek === 1 ? '' : 's'} a week × ${sessionMinutes ?? 60} min`
+        : 'Training: none',
+      `+ ${a.trainingAddition.toFixed(2)}`,
+    ],
+  ];
+  return (
+    <div>
+      <p className="font-medium text-text">How active you are</p>
+      <dl className="mt-2 space-y-1">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex justify-between gap-4">
+            <dt>{label}</dt>
+            <dd className="tabular-nums">{value}</dd>
+          </div>
+        ))}
+        <div className="flex justify-between gap-4 border-t border-border pt-1 font-medium text-text">
+          <dt>Activity factor{capped ? ' (upper limit)' : ''}</dt>
+          <dd className="tabular-nums">{a.factor.toFixed(2)}</dd>
+        </div>
+      </dl>
+      <p className="mt-2">
+        {a.factor.toFixed(2)} × resting energy {fmt(t.bmr.value)} kcal = maintenance {fmt(t.tdee.value)} kcal. Each 1,000 daily
+        steps above 3,000 adds 0.03, and so does each hour of training a week, so moving more always means more food.
+      </p>
+    </div>
   );
 }

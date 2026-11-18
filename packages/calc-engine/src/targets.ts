@@ -1,4 +1,4 @@
-import { bmi, computeActivityFactor, computeBmr, computeTdee, type BmrResult, type TdeeResult } from './energy.js';
+import { bmi, computeActivityFactor, computeBmr, computeTdee, type ActivityResult, type BmrResult, type TdeeResult } from './energy.js';
 import { POLICY_VERSION, policy } from './policy.js';
 import { screen, type ScreeningResult } from './safety.js';
 import { targetsInputSchema, type TargetsInput, type ValidatedTargetsInput } from './schemas.js';
@@ -15,6 +15,8 @@ export interface NutritionTargets {
   /** The goal actually used; differs from requestedGoal only when safety rules changed it. */
   appliedGoal: Goal;
   bmr: BmrResult;
+  /** How the activity factor was built from the user's answers. */
+  activity: Omit<ActivityResult, 'assumptions'>;
   tdee: TdeeResult;
   calories: number;
   /** Positive = deficit, negative = surplus, relative to TDEE (kcal/day). */
@@ -112,6 +114,7 @@ export function computeTargets(rawInput: TargetsInput): NutritionTargets {
     requestedGoal: input.goal,
     appliedGoal,
     bmr,
+    activity: { factor: activity.factor, baseFactor: activity.baseFactor, baseSource: activity.baseSource, trainingAddition: activity.trainingAddition },
     tdee,
     calories,
     dailyDeficitKcal: tdee.value - calories,
@@ -208,7 +211,8 @@ function computeCalories(
     // Round up so rounding can never push a deficit below the floor.
     return Math.min(roundUpTo(calories, policy.calorieRoundingKcal), tdee);
   }
-  return roundTo(calories, policy.calorieRoundingKcal);
+  // Round up so maintenance and surplus goals can never show a small deficit.
+  return roundUpTo(calories, policy.calorieRoundingKcal);
 }
 
 /** Actual weight, or the weight at BMI 25 when BMI is 30 or above. */
