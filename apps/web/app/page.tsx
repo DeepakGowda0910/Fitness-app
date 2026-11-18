@@ -26,7 +26,7 @@ export default function Home() {
     <div className="space-y-12 lg:space-y-16">
       <section className="grid items-center gap-8 lg:grid-cols-2">
         <div>
-          <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Know exactly what to eat for your goal.</h1>
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">Know exactly what to eat for your goal.</h1>
           <p className="mt-4 max-w-prose text-lg text-muted">
             Answer a few questions and get daily calorie and macro targets worked out from your body, activity and goal. Takes about three
             minutes.
@@ -46,21 +46,21 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <div className="tint tint-2 rounded-2xl border border-border bg-surface p-6 shadow-sm">
           <p className="text-sm text-muted">Example: man, 30, 175 cm, 80 kg, 7,000 steps a day, training 3 times a week, losing fat steadily</p>
           <p className="mt-2 text-4xl font-semibold">
             {fmt(EXAMPLE.calories)} <span className="text-lg font-medium text-muted">kcal/day</span>
           </p>
           <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-            <div className="rounded-xl bg-surface-2 p-3">
+            <div className="rounded-xl bg-protein-soft p-3">
               <p className="text-muted">Protein</p>
               <p className="text-lg font-semibold">{fmt(EXAMPLE.proteinG)} g</p>
             </div>
-            <div className="rounded-xl bg-surface-2 p-3">
+            <div className="rounded-xl bg-carbs-soft p-3">
               <p className="text-muted">Carbs</p>
               <p className="text-lg font-semibold">{fmt(EXAMPLE.carbsG)} g</p>
             </div>
-            <div className="rounded-xl bg-surface-2 p-3">
+            <div className="rounded-xl bg-fat-soft p-3">
               <p className="text-muted">Fat</p>
               <p className="text-lg font-semibold">{fmt(EXAMPLE.fatG)} g</p>
             </div>
@@ -68,9 +68,9 @@ export default function Home() {
         </div>
       </section>
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="rounded-2xl border border-border bg-surface p-5">
-            <h2 className="font-semibold">{f.title}</h2>
+        {FEATURES.map((f, i) => (
+          <div key={f.title} className={`tint tint-${(i % 4) + 1} rounded-2xl border border-border bg-surface p-5`}>
+            <h2 className="font-bold">{f.title}</h2>
             <p className="mt-2 text-sm text-muted">{f.body}</p>
           </div>
         ))}

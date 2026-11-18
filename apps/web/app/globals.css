@@ -1,19 +1,24 @@
 @import 'tailwindcss';
 
+/* "Sky Pop": the brand light blue as a sky-to-indigo gradient, with warm coral and sun accents. */
 :root {
-  --bg: #f5f7fa;
+  --bg: #f6faff;
   --surface: #ffffff;
-  --surface-2: #edf1f6;
+  --surface-2: #edf3fa;
   --text: #16202a;
-  --muted: #5a6675;
-  --border: #dbe2ea;
-  --brand: #0273b3;
-  --brand-strong: #035e93;
+  --muted: #566475;
+  --border: #dbe4ee;
+  --brand: #0284c7;
+  --brand-strong: #0369a1;
   --brand-soft: #e0f2fe;
   --on-brand: #ffffff;
-  --protein: #0273b3;
-  --carbs: #c2410c;
-  --fat: #7c3aed;
+  --accent: #c2410c;
+  --protein: #0ea5e9;
+  --carbs: #f2652e;
+  --fat: #a855f7;
+  --protein-soft: #dff2ff;
+  --carbs-soft: #ffe9df;
+  --fat-soft: #f1e5ff;
   --warn-bg: #fff6e5;
   --warn-text: #7a4b00;
   --warn-border: #f3d48f;
@@ -21,23 +26,48 @@
   --danger-text: #8a1c1c;
   --danger-border: #f2b8b8;
   --focus: #2563eb;
+
+  --grad: linear-gradient(135deg, #0284c7 0%, #2563eb 55%, #4f46e5 100%);
+  --glow: rgb(59 130 246 / 0.32);
+  --title-grad: linear-gradient(90deg, #0b3b66, #2563eb 60%, #6366f1);
+  --page-bg: radial-gradient(900px 500px at 100% -10%, #dbeafe 0, transparent 60%),
+    radial-gradient(700px 400px at -10% 30%, #ffe8dc 0, transparent 60%), #f6faff;
+  --header-bg: rgb(255 255 255 / 0.85);
+  --card-shadow: 0 6px 24px rgb(20 30 60 / 0.08);
+  /* One colour per card, used in turn so neighbouring cards differ. */
+  --c1: #0ea5e9;
+  --t1: #eaf6ff;
+  --c2: #f2652e;
+  --t2: #fff1ea;
+  --c3: #a855f7;
+  --t3: #f6edff;
+  --c4: #e0a100;
+  --t4: #fff8e1;
+  --l1: #0369a1;
+  --l2: #c2410c;
+  --l3: #7e22ce;
+  --l4: #8a5a00;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1419;
-    --surface: #161d24;
-    --surface-2: #1e2730;
-    --text: #e8eef4;
-    --muted: #9aa6b2;
-    --border: #2a3540;
+    --bg: #0b1220;
+    --surface: #131c2e;
+    --surface-2: #1c2740;
+    --text: #eef3fb;
+    --muted: #a0acc2;
+    --border: #26324d;
     --brand: #38bdf8;
     --brand-strong: #7dd3fc;
     --brand-soft: #0c2d48;
-    --on-brand: #082f49;
+    --on-brand: #ffffff;
+    --accent: #ff8a5c;
     --protein: #38bdf8;
-    --carbs: #fb923c;
-    --fat: #a78bfa;
+    --carbs: #fb8a4c;
+    --fat: #c084fc;
+    --protein-soft: #0f2c42;
+    --carbs-soft: #3a2116;
+    --fat-soft: #2c1b42;
     --warn-bg: #2d2412;
     --warn-text: #f5d38b;
     --warn-border: #5c4718;
@@ -45,6 +75,26 @@
     --danger-text: #f5b4b4;
     --danger-border: #6b2525;
     --focus: #60a5fa;
+
+    --grad: linear-gradient(135deg, #0284c7 0%, #2563eb 55%, #4f46e5 100%);
+    --glow: rgb(56 189 248 / 0.3);
+    --title-grad: linear-gradient(90deg, #ffffff, #bae6fd 50%, #c7d2fe);
+    --page-bg: radial-gradient(900px 500px at 100% -10%, rgb(59 130 246 / 0.25) 0, transparent 60%),
+      radial-gradient(700px 400px at -10% 40%, rgb(249 115 22 / 0.12) 0, transparent 60%), #0b1220;
+    --header-bg: rgb(11 18 32 / 0.82);
+    --card-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+    --c1: #38bdf8;
+    --t1: #10253b;
+    --c2: #fb8a4c;
+    --t2: #2e1d17;
+    --c3: #c084fc;
+    --t3: #241a3a;
+    --c4: #fbbf24;
+    --t4: #2a2414;
+    --l1: #7dd3fc;
+    --l2: #fdba74;
+    --l3: #d8b4fe;
+    --l4: #fcd34d;
   }
 }
 
@@ -62,6 +112,10 @@
   --color-protein: var(--protein);
   --color-carbs: var(--carbs);
   --color-fat: var(--fat);
+  --color-protein-soft: var(--protein-soft);
+  --color-carbs-soft: var(--carbs-soft);
+  --color-fat-soft: var(--fat-soft);
+  --color-accent: var(--accent);
   --color-warn-bg: var(--warn-bg);
   --color-warn-text: var(--warn-text);
   --color-warn-border: var(--warn-border);
@@ -76,7 +130,9 @@ html {
 }
 
 body {
-  background: var(--bg);
+  background: var(--page-bg);
+  background-repeat: no-repeat;
+  background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
 }
@@ -94,3 +150,77 @@ input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* ---- Sky Pop finish. Unlayered, so these win over the Tailwind utilities they extend. ---- */
+
+/* Gradient fill for everything painted in the brand colour: buttons, logo, bars, selected tabs. */
+.bg-brand {
+  background-image: var(--grad);
+}
+/* Not on tabs: their scroll strip would clip the glow into a hard edge. */
+a.bg-brand,
+button.bg-brand:not([role='tab']) {
+  box-shadow: 0 8px 22px var(--glow);
+}
+
+h1 {
+  background: var(--title-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+}
+
+/* Small label above a page title. */
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Cards float on the tinted page instead of sitting in grey outlines. */
+.rounded-2xl.border.bg-surface {
+  border-color: transparent;
+  box-shadow: var(--card-shadow);
+}
+
+/* The big coloured number card, with soft circles for depth. */
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 28px var(--glow);
+}
+.hero-card > * {
+  position: relative;
+}
+.hero-card::before,
+.hero-card::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.14);
+}
+.hero-card::after {
+  right: -40px;
+  top: -40px;
+  width: 180px;
+  height: 180px;
+}
+.hero-card::before {
+  right: 50px;
+  bottom: -60px;
+  width: 120px;
+  height: 120px;
+}
+
+/* Colour-coded cards: a tinted fill with a bold top edge. Three classes, to beat the card rule above. */
+.rounded-2xl.tint.tint-1 { background: var(--t1); border-top: 5px solid var(--c1); }
+.rounded-2xl.tint.tint-2 { background: var(--t2); border-top: 5px solid var(--c2); }
+.rounded-2xl.tint.tint-3 { background: var(--t3); border-top: 5px solid var(--c3); }
+.rounded-2xl.tint.tint-4 { background: var(--t4); border-top: 5px solid var(--c4); }
+.tint-1 .tint-label { color: var(--l1); font-weight: 800; }
+.tint-2 .tint-label { color: var(--l2); font-weight: 800; }
+.tint-3 .tint-label { color: var(--l3); font-weight: 800; }
+.tint-4 .tint-label { color: var(--l4); font-weight: 800; }

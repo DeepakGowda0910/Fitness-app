@@ -83,7 +83,7 @@ function Plan({ targets, adjusted, draft }: { targets: DayTargets; adjusted: boo
   const header = (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <p className="text-sm font-medium text-brand">
+        <p className="eyebrow">
           {labelOf(DIET_TYPES, draft.dietType)} · {draft.mealsPerDay} meals a day · {fmt(targets.calories)} kcal{adjusted ? ' (updated by check-in)' : ''}
         </p>
         <h1 className="text-3xl font-semibold tracking-tight">Your 7-day diet plan</h1>
@@ -145,8 +145,9 @@ function Plan({ targets, adjusted, draft }: { targets: DayTargets; adjusted: boo
 
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-6">
         <div className="grid gap-4 md:grid-cols-2">
-          {day.meals.map((meal) => (
+          {day.meals.map((meal, i) => (
             <MealCard
+              tone={((i % 4) + 1) as 1 | 2 | 3 | 4}
               key={`${day.dayIndex}-${meal.slot}`}
               meal={meal}
               onSwap={() => update({ ...settings, excludeDishIds: [...settings.excludeDishIds, meal.dishId] })}
@@ -200,12 +201,12 @@ function DayTabs({ days, active, onSelect }: { days: PlannedDay[]; active: numbe
   );
 }
 
-function MealCard({ meal, onSwap }: { meal: PlannedMeal; onSwap: () => void }) {
+function MealCard({ meal, tone, onSwap }: { meal: PlannedMeal; tone: 1 | 2 | 3 | 4; onSwap: () => void }) {
   return (
-    <section className="flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm">
+    <section className={`tint tint-${tone} flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">{slotLabel(meal.slot)}</p>
+          <p className="tint-label text-xs font-medium uppercase tracking-wide text-muted">{slotLabel(meal.slot)}</p>
           <h2 className="mt-0.5 text-lg font-semibold leading-snug">{meal.dishName}</h2>
         </div>
         <div className="shrink-0 text-right">

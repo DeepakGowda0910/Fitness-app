@@ -158,7 +158,7 @@ function Workouts({ draft }: { draft: AssessmentDraft }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-brand">
+          <p className="eyebrow">
             {program.splitName} · about {request.sessionMinutes} min
           </p>
           <h1 className="text-3xl font-semibold tracking-tight">Your workout plan</h1>
@@ -612,7 +612,7 @@ function Logger({
     <div className="space-y-5 pb-24">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-brand">
+          <p className="eyebrow">
             In progress · {elapsedMin} min · {fmtDate(state.date)}
           </p>
           <h1 className="text-3xl font-semibold tracking-tight">{day.name}</h1>
