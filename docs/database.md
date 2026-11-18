@@ -16,6 +16,7 @@ wall behind the API's own checks.
 | `health_screenings`, `nutrition_targets`, `checkin_assessments` | read their own | writes (numbers only ever come from the calc engine) |
 | `consents` | read and add their own | everything |
 | `audit_logs` | read entries about themselves | writes |
+| `food_sources`, `foods`, `food_nutrients`, `food_portions` | read all (shared reference data) | imports and corrections |
 | anything | not signed in (`anon`): nothing | |
 
 The API must run user requests through `withUser(db, authUserId, fn)`, which
@@ -31,3 +32,9 @@ reject UPDATE through a trigger (`0001_append_only.sql`).
 Tests run the real migrations on PGlite (in-memory Postgres) with a small
 stand-in for Supabase's `auth.uid()` and roles (`test/helpers.ts`). No account
 or credentials are needed.
+
+## Food data
+
+`seedIfct2017(db, ifct2017())` imports the 542 IFCT 2017 foods from
+`@fitness/food-data` with 11 nutrients each (per 100 g). It is idempotent, so
+it can be re-run after a data correction. Run it with the service role.
