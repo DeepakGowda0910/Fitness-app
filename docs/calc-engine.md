@@ -121,3 +121,12 @@ and for later blending; it does not change the decision yet.
 
 Every result records `engineVersion`, `ruleFired` and plain-language
 `reasons` that the app (or later an AI explanation) can show.
+
+## Meal quantity solver
+
+`solveDay(items, targets)` picks ingredient quantities for a day. Each item
+has a raw-weight range and step; the search starts mid-range and repeatedly
+takes the best single step or paired move (one item up, another down) until
+nothing improves a weighted squared error (calories weighted most, protein
+mainly penalised when short, fibre only when short). Tolerances and weights
+are in `policy.mealPlan`. Results are deterministic and always on the step grid.

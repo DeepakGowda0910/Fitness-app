@@ -11,7 +11,7 @@
 
 import type { Goal } from './types.js';
 
-export const POLICY_VERSION = '2026.11.1';
+export const POLICY_VERSION = '2026.11.2';
 
 export interface GoalPolicy {
   /** Protein in g per kg of reference weight: the default used, and the guidance range. */
@@ -131,6 +131,19 @@ export const policy = {
     observedTdeeMinWeeks: 3,
     /** Cycle-aware: compare over this many weeks instead of one. */
     cycleAwareWeeks: 4,
+  },
+
+  /** Meal plan solver: when a day counts as on target, and how misses are weighted. */
+  mealPlan: {
+    tolerance: {
+      caloriesPct: 0.05,
+      proteinMinRatio: 0.95,
+      carbsPct: 0.1,
+      fatPct: 0.1,
+      fibreMinRatio: 0.9,
+    },
+    weights: { calories: 6, proteinShort: 4, proteinExcess: 0.3, carbs: 1, fat: 1.5, fibreShort: 0.5 },
+    maxSolverIterations: 500,
   },
 
   /** Calories are rounded to this step before macros are derived. */

@@ -1,0 +1,30 @@
+{
+  "name": "@fitness/meal-planner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Curated Indian dishes and the deterministic 7-day diet plan generator.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fitness/calc-engine": "workspace:*",
+    "@fitness/food-data": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "fast-check": "^4.10.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12"
+  }
+}
