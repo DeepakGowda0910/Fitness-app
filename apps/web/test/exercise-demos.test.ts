@@ -64,3 +64,13 @@ describe('solveLimb', () => {
     expect(r.miss).toBeCloseTo(52, 3);
   });
 });
+
+describe('workedParts', () => {
+  it('maps each exercise muscle list to body parts shown in red', async () => {
+    const { workedParts } = await import('../lib/demo-draw');
+    expect([...workedParts('Quads, glutes')].sort()).toEqual(['glute', 'thigh']);
+    expect([...workedParts('Chest, shoulders, triceps')].sort()).toEqual(['delt', 'pec', 'upperArm']);
+    expect([...workedParts('Heart and lungs')]).toEqual([]);
+    for (const e of EXERCISES) if (e.pattern !== 'conditioning') expect(workedParts(e.muscles).size).toBeGreaterThan(0);
+  });
+});

@@ -1,20 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { demoViewBox, drawFrame, type Paint, type Shape } from '@/lib/demo-draw';
+import { exerciseById } from '@fitness/workout-planner';
+import { COLORS as PAINT, demoViewBox, drawFrame, workedParts, type Shape } from '@/lib/demo-draw';
 import { cycleMs, sample, solve } from '@/lib/demo-rig';
 import { demoFor } from '@/lib/exercise-demos';
-
-/** Theme-aware colours, so the drawing follows light and dark mode. */
-const PAINT: Record<Paint, string> = {
-  body: 'var(--brand)',
-  bodyFar: 'color-mix(in srgb, var(--brand) 45%, var(--surface))',
-  skin: '#f1b98f',
-  kit: 'color-mix(in srgb, var(--text) 75%, var(--surface))',
-  kitSoft: 'color-mix(in srgb, var(--muted) 35%, var(--surface))',
-  floor: 'var(--border)',
-  face: '#16202a',
-};
 
 const FRAME_MS = 1000 / 30;
 
@@ -32,6 +22,7 @@ function prefersReducedMotion(): boolean {
  */
 export function ExerciseDemo({ exerciseId, name, compact = false }: { exerciseId: string; name: string; compact?: boolean }) {
   const demo = demoFor(exerciseId);
+  const worked = useMemo(() => workedParts(exerciseById(exerciseId)?.muscles ?? ''), [exerciseId]);
   const boxRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [playing, setPlaying] = useState(true);
@@ -89,16 +80,17 @@ export function ExerciseDemo({ exerciseId, name, compact = false }: { exerciseId
   const view = useMemo(() => {
     if (!demo) return null;
     const s = sample(demo, ms);
-    return { shapes: drawFrame(demo, solve(s.pose, demo), s.opacity), key: s.key };
-  }, [demo, ms]);
+    return { shapes: drawFrame(demo, solve(s.pose, demo), s.opacity, worked), key: s.key };
+  }, [demo, ms, worked]);
 
   if (!demo || !view) return null;
   const label = demo.keys[view.key]?.label ?? '';
   const steps = new Set(demo.keys.map((k) => k.label)).size;
 
   return (
-    <figure ref={boxRef} className={`overflow-hidden rounded-xl border border-border bg-surface-2/60 ${compact ? 'max-w-72' : ''}`}>
-      <div className="relative">
+    <figure ref={boxRef} className={`overflow-hidden rounded-xl border border-border bg-surface ${compact ? 'max-w-72' : ''}`}>
+      {/* A light "studio" backdrop in both themes, so the shaded figure reads clearly. */}
+      <div className="relative" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 70%, #e8eef4 100%)' }}>
         <svg
           viewBox={viewBox}
           preserveAspectRatio="xMidYMax meet"
@@ -133,6 +125,15 @@ export function ExerciseDemo({ exerciseId, name, compact = false }: { exerciseId
         <span className="mt-0.5 block text-muted">
           {demo.note ? `${demo.note} · ` : ''}
           {steps > 1 ? `${steps}-step animated guide` : 'Animated guide'}
+          {worked.size > 0 ? (
+            <>
+              {' · '}
+              <span className="whitespace-nowrap">
+                <span className="mr-1 inline-block size-2 rounded-full align-middle" style={{ background: PAINT.m1 }} aria-hidden />
+                red = muscles worked
+              </span>
+            </>
+          ) : null}
         </span>
       </figcaption>
     </figure>
@@ -160,6 +161,8 @@ function ShapeEl({ s }: { s: Shape }) {
       return <circle cx={s.c0[0]} cy={s.c0[1]} r={s.r} fill={PAINT[s.fill]} opacity={opacity} />;
     case 'ring':
       return <circle cx={s.c0[0]} cy={s.c0[1]} r={s.r} fill="none" stroke={PAINT[s.c]} strokeWidth={s.w} opacity={opacity} />;
+    case 'ellipse':
+      return <ellipse cx={s.c0[0]} cy={s.c0[1]} rx={s.rx} ry={s.ry} fill={PAINT[s.fill]} opacity={opacity} />;
     case 'rect':
       return <rect x={s.x} y={s.y} width={s.w} height={s.h} rx={s.r} fill={PAINT[s.fill]} opacity={opacity} />;
   }
