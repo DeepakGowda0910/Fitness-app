@@ -48,6 +48,10 @@ export function MealRecipe({ meal, dietType }: { meal: PlannedMeal; dietType: Di
           </div>
         </dl>
 
+        <p className="text-xs italic text-muted">
+          This recipe is just a suggestion. Feel free to cook it your own way, as long as you use the ingredients and amounts listed above.
+        </p>
+
         {recipe.ahead ? <p className="rounded-lg bg-accent/10 px-2.5 py-1.5 text-xs">⏰ Plan ahead: {recipe.ahead}.</p> : null}
 
         <ol className="space-y-2">
