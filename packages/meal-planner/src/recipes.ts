@@ -13,7 +13,7 @@
  * alongside the dish catalogue before commercial use.
  */
 import type { DietType } from './classify.js';
-import type { PlannedMeal } from './planner.js';
+import { isFruit, type PlannedMeal } from './planner.js';
 
 /** Ingredient keys used in recipe text, each matching one or more food codes. */
 const KEYS: Record<string, readonly string[]> = {
@@ -88,6 +88,10 @@ const LABELS: Record<string, string> = {
   E012: 'banana',
   E001: 'apple',
   E028: 'guava',
+  E047: 'orange',
+  E049: 'papaya',
+  E051: 'pear',
+  E055: 'pomegranate',
   F002: 'carrot',
   G017: 'onion',
   H001: 'almonds',
@@ -828,6 +832,13 @@ export function recipeFor(meal: PlannedMeal, dietType?: DietType, options: { str
     const parts = fillStep(step.text, amountOf);
     if (parts) steps.push(parts);
     else if (options.strict) throw new Error(`Recipe ${meal.dishId}: step "${step.text}" names an ingredient the meal does not have`);
+  }
+
+  // A fruit side the planner added to the meal (not part of the dish's own recipe).
+  const mentioned = new Set(steps.flat().flatMap((p) => (typeof p === 'string' ? [] : [p.code])));
+  for (const item of meal.items) {
+    if (!isFruit(item.code) || mentioned.has(item.code)) continue;
+    steps.push(['Have ', { code: item.code, label: LABELS[item.code] ?? item.name, grams: item.grams }, ' on the side, washed and cut. Whole fruit keeps its fibre, so eat it rather than juicing it.']);
   }
 
   return {

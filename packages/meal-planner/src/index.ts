@@ -3,6 +3,8 @@ export { adaptDish, allergensOf, dietLevel, isJainExcluded, type Allergen, type 
 export {
   generateWeekPlan,
   PlanError,
+  FRUIT_SIDES,
+  isFruit,
   PLANNER_VERSION,
   type PlanRequest,
   type PlannedItem,
@@ -11,3 +13,4 @@ export {
   type WeekPlan,
 } from './planner.js';
 export { formatAmount, RECIPES, recipeFor, recipeKeys, RECIPE_KEYS, type Recipe, type RecipeAmount, type RecipePart } from './recipes.js';
+export { displayName, hasDisplayName } from './names.js';
