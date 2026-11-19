@@ -256,5 +256,6 @@ describe('adaptive properties', () => {
       }),
       { numRuns: 3000 },
     );
-  });
+    // 3,000 random cases take ~6 s on a busy CI runner, over Vitest's 5 s default.
+  }, 30_000);
 });
