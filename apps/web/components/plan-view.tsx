@@ -1,7 +1,7 @@
 'use client';
 
 import type { DayTargets } from '@fitness/calc-engine';
-import { generateWeekPlan, PlanError, type PlannedDay, type PlannedMeal, type WeekPlan } from '@fitness/meal-planner';
+import { displayName, generateWeekPlan, PlanError, type PlannedDay, type PlannedMeal, type WeekPlan } from '@fitness/meal-planner';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AssessmentDraft } from '@/lib/assessment';
@@ -229,7 +229,7 @@ function MealCard({
       <ul className="mt-3 flex-1 divide-y divide-border text-sm">
         {meal.items.map((it) => (
           <li key={it.code} className="flex justify-between gap-3 py-1.5">
-            <span className="min-w-0 text-muted">{it.name}</span>
+            <span className="min-w-0 text-muted">{displayName(it.code, it.name)}</span>
             <span className="shrink-0 text-right font-medium">
               {it.household ? `${it.household} · ` : ''}
               {fmt(it.grams)} g

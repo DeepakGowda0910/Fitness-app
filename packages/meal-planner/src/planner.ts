@@ -12,7 +12,7 @@ import { allFoods, type ReferenceFood } from '@fitness/food-data';
 import { adaptDish, type Allergen, type DietType } from './classify.js';
 import { DISHES, type Dish, type MealSlot } from './dishes.js';
 
-export const PLANNER_VERSION = '0.1.0';
+export const PLANNER_VERSION = '0.2.0';
 
 export interface PlanRequest {
   targets: DayTargets;
@@ -107,8 +107,9 @@ export function generateWeekPlan(request: PlanRequest, dishes: readonly Dish[] =
   for (let day = 0; day < 7; day++) {
     let best: { day: PlannedDay; score: number } | null = null;
     for (let c = 0; c < CANDIDATES_PER_DAY; c++) {
-      const combo = pickCombo(slots, eligible, day, variant, c);
-      if (!combo) continue;
+      const picked = pickCombo(slots, eligible, day, variant, c);
+      if (!picked) continue;
+      const combo = withFruit(picked, day + variant);
       const planned = planDay(combo, request.targets, foods, day, addDays(request.startDate, day));
       const score = planScore(planned, request.targets);
       if (!best || score < best.score) best = { day: planned, score };
@@ -152,6 +153,45 @@ export class PlanError extends Error {
   ) {
     super(message);
   }
+}
+
+/** Fruits offered as a side, in rotation. IFCT codes and everyday names. */
+export const FRUIT_SIDES: ReadonlyArray<readonly [code: string, name: string]> = [
+  ['E049', 'papaya'],
+  ['E001', 'apple'],
+  ['E012', 'banana'],
+  ['E047', 'orange'],
+  ['E028', 'guava'],
+  ['E055', 'pomegranate'],
+  ['E051', 'pear'],
+];
+
+/** IFCT group E is fruit; lemon juice and tamarind are used as flavourings, not fruit. */
+export function isFruit(code: string): boolean {
+  return code[0] === 'E' && code !== 'E033' && code !== 'E064';
+}
+
+/**
+ * Makes sure every day has at least one serving of fruit (100 to 150 g). If no
+ * dish that day already includes fruit, a fruit is added to breakfast as a
+ * side, rotating through FRUIT_SIDES. The solver then sets every quantity,
+ * fruit included, so the day still meets its targets. Fruit has no allergens
+ * and suits every diet, so no filtering is needed.
+ */
+function withFruit(combo: Array<[MealSlot, Dish]>, rotation: number): Array<[MealSlot, Dish]> {
+  if (combo.some(([, d]) => d.ingredients.some((i) => isFruit(i.code) && i.minG >= 100))) return combo;
+  const at = combo.findIndex(([slot]) => slot === 'breakfast');
+  if (at < 0) return combo;
+  const [slot, dish] = combo[at]!;
+  const inDish = new Set(dish.ingredients.map((i) => i.code));
+  for (let k = 0; k < FRUIT_SIDES.length; k++) {
+    const [code, name] = FRUIT_SIDES[(rotation + k) % FRUIT_SIDES.length]!;
+    if (inDish.has(code)) continue;
+    const out = [...combo];
+    out[at] = [slot, { ...dish, name: `${dish.name} + ${name}`, ingredients: [...dish.ingredients, { code, minG: 100, maxG: 150, stepG: 50 }] }];
+    return out;
+  }
+  return combo;
 }
 
 /** Candidate c shifts the rotation so different days and retries see different dishes. */
