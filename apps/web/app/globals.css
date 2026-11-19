@@ -259,3 +259,6 @@ h1 {
     transition: none;
   }
 }
+
+/* While a recipe is open, meal cards keep their own height instead of stretching to the open one. */
+.meal-grid:has(details[open]) > section { align-self: start; }

@@ -10,3 +10,4 @@ export {
   type PlannedDay,
   type WeekPlan,
 } from './planner.js';
+export { formatAmount, RECIPES, recipeFor, recipeKeys, RECIPE_KEYS, type Recipe, type RecipeAmount, type RecipePart } from './recipes.js';
