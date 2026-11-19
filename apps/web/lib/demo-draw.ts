@@ -9,10 +9,64 @@ export type Shape =
   | { t: 'path'; d: string; w: number; c: Paint; o?: number; fill?: Paint }
   | { t: 'circle'; c0: Pt; r: number; fill: Paint; o?: number }
   | { t: 'ring'; c0: Pt; r: number; w: number; c: Paint; o?: number }
-  | { t: 'rect'; x: number; y: number; w: number; h: number; r: number; fill: Paint; o?: number };
+  | { t: 'rect'; x: number; y: number; w: number; h: number; r: number; fill: Paint; o?: number }
+  | { t: 'ellipse'; c0: Pt; rx: number; ry: number; fill: Paint; o?: number };
 
-/** Colour roles, mapped to the app's theme colours by the renderer. */
-export type Paint = 'body' | 'bodyFar' | 'skin' | 'kit' | 'kitSoft' | 'floor' | 'face';
+/**
+ * Colour roles. The body is drawn in three tones (dark, mid, light) so each
+ * limb looks rounded: b = body, m = working muscle, f/g = the same on the far
+ * side, a little darker for depth.
+ */
+export type Paint =
+  | 'b0' | 'b1' | 'b2'
+  | 'm0' | 'm1' | 'm2'
+  | 'f0' | 'f1' | 'f2'
+  | 'g0' | 'g1' | 'g2'
+  | 'kit' | 'kitHi' | 'kitSoft' | 'kitTop' | 'kitSide'
+  | 'floor' | 'shadow' | 'face';
+
+/** Fixed studio colours, the same in light and dark mode. */
+export const COLORS: Record<Paint, string> = {
+  b0: '#76808c',
+  b1: '#a9b2bd',
+  b2: '#dfe5ec',
+  m0: '#982c20',
+  m1: '#d2543e',
+  m2: '#f4a28c',
+  f0: '#5c6470',
+  f1: '#87909b',
+  f2: '#b2bac4',
+  g0: '#74241a',
+  g1: '#a94231',
+  g2: '#cf7b69',
+  kit: '#343d48',
+  kitHi: '#76828f',
+  kitSoft: '#c3ccd7',
+  kitTop: '#e6ebf1',
+  kitSide: '#98a3b1',
+  floor: '#d5dee8',
+  shadow: '#1b2433',
+  face: '#4a525d',
+};
+
+/** Body parts that can be shown as working muscles (in red). */
+export type Part = 'torso' | 'pec' | 'glute' | 'delt' | 'upperArm' | 'forearm' | 'thigh' | 'shin';
+
+/** Which body parts an exercise's muscle list ("Quads, glutes") works. */
+export function workedParts(muscles: string): Set<Part> {
+  const m = muscles.toLowerCase();
+  const out = new Set<Part>();
+  const has = (...words: string[]) => words.some((w) => m.includes(w));
+  if (has('quad', 'hamstring', 'hip flexor')) out.add('thigh');
+  if (has('glute')) out.add('glute');
+  if (has('calves', 'calf')) out.add('shin');
+  if (has('chest')) out.add('pec');
+  if (has('shoulder')) out.add('delt');
+  if (has('triceps', 'biceps')) out.add('upperArm');
+  if (has('forearm')) out.add('forearm');
+  if (has('lats', 'back', 'abs', 'core', 'oblique')) out.add('torso');
+  return out;
+}
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const P = (p: Pt) => `${r1(p[0])} ${r1(p[1])}`;
@@ -25,25 +79,30 @@ function propShapes(p: Prop, f: Frame): Shape[] {
       const r = p.r ?? 15;
       return [
         { t: 'circle', c0: c, r, fill: 'kit' },
-        { t: 'circle', c0: c, r: r * 0.55, fill: 'kitSoft' },
-        { t: 'circle', c0: c, r: 2.2, fill: 'kit' },
+        { t: 'ring', c0: [c[0] - 0.6, c[1] - 0.9], r: r1(r * 0.86), w: 1.4, c: 'kitHi' },
+        { t: 'circle', c0: c, r: r1(r * 0.42), fill: 'kitSide' },
+        { t: 'circle', c0: c, r: 2.4, fill: 'kitTop' },
       ];
     }
     case 'dumbbell': {
       const c = jointAt(f, p.at);
       return [
-        { t: 'rect', x: c[0] - 8, y: c[1] - 2, w: 16, h: 4, r: 2, fill: 'kit' },
-        { t: 'rect', x: c[0] - 10, y: c[1] - 5.5, w: 5, h: 11, r: 1.5, fill: 'kit' },
-        { t: 'rect', x: c[0] + 5, y: c[1] - 5.5, w: 5, h: 11, r: 1.5, fill: 'kit' },
+        { t: 'rect', x: c[0] - 8, y: c[1] - 1.8, w: 16, h: 3.6, r: 1.8, fill: 'kitSide' },
+        { t: 'rect', x: c[0] - 11, y: c[1] - 6, w: 6, h: 12, r: 2, fill: 'kit' },
+        { t: 'rect', x: c[0] + 5, y: c[1] - 6, w: 6, h: 12, r: 2, fill: 'kit' },
+        { t: 'rect', x: c[0] - 10, y: c[1] - 5, w: 1.8, h: 8, r: 0.9, fill: 'kitHi' },
+        { t: 'rect', x: c[0] + 6, y: c[1] - 5, w: 1.8, h: 8, r: 0.9, fill: 'kitHi' },
       ];
     }
     case 'kettle': {
       // A dumbbell held upright at the chest (goblet hold).
       const c = jointAt(f, p.at);
       return [
-        { t: 'rect', x: c[0] - 2, y: c[1] - 9, w: 4, h: 18, r: 2, fill: 'kit' },
-        { t: 'rect', x: c[0] - 6, y: c[1] - 12, w: 12, h: 6, r: 2, fill: 'kit' },
-        { t: 'rect', x: c[0] - 6, y: c[1] + 6, w: 12, h: 6, r: 2, fill: 'kit' },
+        { t: 'rect', x: c[0] - 1.8, y: c[1] - 9, w: 3.6, h: 18, r: 1.8, fill: 'kitSide' },
+        { t: 'rect', x: c[0] - 6, y: c[1] - 13, w: 12, h: 6, r: 2, fill: 'kit' },
+        { t: 'rect', x: c[0] - 6, y: c[1] + 7, w: 12, h: 6, r: 2, fill: 'kit' },
+        { t: 'rect', x: c[0] - 5, y: c[1] - 12, w: 8, h: 1.6, r: 0.8, fill: 'kitHi' },
+        { t: 'rect', x: c[0] - 5, y: c[1] + 8, w: 8, h: 1.6, r: 0.8, fill: 'kitHi' },
       ];
     }
     case 'bag': {
@@ -84,76 +143,138 @@ function propShapes(p: Prop, f: Frame): Shape[] {
       return [{ t: 'line', a: [c[0] - u[0] * 16, c[1] - u[1] * 16], b: [c[0] + u[0] * 16, c[1] + u[1] * 16], w: 6, c: 'kit' }];
     }
     case 'rect':
-      return [{ t: 'rect', x: p.x, y: p.y, w: p.w, h: p.h, r: p.r ?? 3, fill: 'kitSoft' }];
+      // Lit from above: a pale top edge and a darker underside give depth.
+      return [
+        { t: 'rect', x: p.x, y: p.y, w: p.w, h: p.h, r: p.r ?? 3, fill: 'kitSide' },
+        { t: 'rect', x: p.x, y: p.y, w: p.w, h: Math.max(2, p.h - 2.5), r: p.r ?? 3, fill: 'kitSoft' },
+        { t: 'rect', x: p.x + 1, y: p.y, w: Math.max(1, p.w - 2), h: Math.min(2.5, p.h / 3), r: 1.2, fill: 'kitTop' },
+      ];
     case 'line':
-      return [{ t: 'line', a: p.a, b: p.b, w: p.w ?? 4, c: 'kitSoft' }];
+      return [
+        { t: 'line', a: p.a, b: p.b, w: p.w ?? 4, c: 'kitSide' },
+        { t: 'line', a: [p.a[0] - 0.6, p.a[1] - 0.6], b: [p.b[0] - 0.6, p.b[1] - 0.6], w: Math.max(1, (p.w ?? 4) * 0.45), c: 'kitSoft' },
+      ];
     case 'ring':
       return [{ t: 'ring', c0: p.c, r: p.r, w: 3, c: 'kitSoft' }];
   }
 }
 
-/** All shapes for one frame, back to front. */
-export function drawFrame(demo: Demo, f: Frame, opacity = 1): Shape[] {
+/** Direction the light comes from (top left), for the shading. */
+const LIGHT: Pt = [-0.45, -0.89];
+
+type Tone = 'b' | 'm' | 'f' | 'g';
+const tone = (worked: boolean, far: boolean): Tone => (far ? (worked ? 'g' : 'f') : worked ? 'm' : 'b');
+
+/**
+ * A rounded limb from a to b (radius ra at a, rb at b), shaded in three tones
+ * so it reads as a cylinder lit from the top left.
+ */
+function capsule(a: Pt, b: Pt, ra: number, rb: number, t: Tone, o: number): Shape[] {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy);
+  let n: Pt = len > 1e-6 ? [-dy / len, dx / len] : LIGHT;
+  if (n[0] * LIGHT[0] + n[1] * LIGHT[1] < 0) n = [-n[0], -n[1]];
+  const r = (ra + rb) / 2;
+  const layer = (scale: number, shift: number, paint: Paint): Shape[] => {
+    const a1: Pt = [a[0] + n[0] * shift, a[1] + n[1] * shift];
+    const b1: Pt = [b[0] + n[0] * shift, b[1] + n[1] * shift];
+    const sa = ra * scale;
+    const sb = rb * scale;
+    const quad = `${poly([a1[0] + n[0] * sa, a1[1] + n[1] * sa], [b1[0] + n[0] * sb, b1[1] + n[1] * sb], [b1[0] - n[0] * sb, b1[1] - n[1] * sb], [a1[0] - n[0] * sa, a1[1] - n[1] * sa])} Z`;
+    return [
+      { t: 'path', d: quad, w: 0, c: paint, fill: paint, o },
+      { t: 'circle', c0: a1, r: r1(sa), fill: paint, o },
+      { t: 'circle', c0: b1, r: r1(sb), fill: paint, o },
+    ];
+  };
+  return [...layer(1, 0, `${t}0` as Paint), ...layer(0.7, r * 0.27, `${t}1` as Paint), ...layer(0.3, r * 0.55, `${t}2` as Paint)];
+}
+
+/** A rounded ball (head, shoulder, chest, glute), shaded the same way. */
+function ball(c: Pt, r: number, t: Tone, o: number): Shape[] {
+  return [
+    { t: 'circle', c0: c, r: r1(r), fill: `${t}0` as Paint, o },
+    { t: 'circle', c0: [c[0] + LIGHT[0] * r * 0.18, c[1] + LIGHT[1] * r * 0.18], r: r1(r * 0.78), fill: `${t}1` as Paint, o },
+    { t: 'circle', c0: [c[0] + LIGHT[0] * r * 0.42, c[1] + LIGHT[1] * r * 0.42], r: r1(r * 0.36), fill: `${t}2` as Paint, o },
+  ];
+}
+
+const along = (a: Pt, b: Pt, k: number): Pt => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+const plus = (a: Pt, v: Pt, k: number): Pt => [a[0] + v[0] * k, a[1] + v[1] * k];
+
+/** All shapes for one frame, back to front. Worked muscles are shown in red. */
+export function drawFrame(demo: Demo, f: Frame, opacity = 1, worked: ReadonlySet<Part> = new Set()): Shape[] {
   const o = opacity;
-  const out: Shape[] = demo.noFloor ? [] : [{ t: 'line', a: [8, FLOOR + 1.5], b: [VIEW_W - 8, FLOOR + 1.5], w: 3, c: 'floor' }];
+  const w = (p: Part) => worked.has(p);
+  const out: Shape[] = [];
+  if (!demo.noFloor) {
+    out.push({ t: 'rect', x: 0, y: FLOOR + 0.5, w: VIEW_W, h: 9.5, r: 0, fill: 'floor' });
+    // A soft shadow under the body.
+    const xs = [f.hip[0], f.shoulder[0], f.ankleN[0], f.ankleF[0]];
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const rx = Math.max(22, (Math.max(...xs) - Math.min(...xs)) / 2 + 14);
+    out.push({ t: 'ellipse', c0: [cx, FLOOR + 2.5], rx: r1(rx), ry: 3.6, fill: 'shadow', o: 0.14 * o });
+  }
   for (const p of demo.back ?? []) out.push(...propShapes(p, f));
 
-  const limb = (a: Pt, b: Pt, c: Pt, w: number, paint: Paint): Shape => ({ t: 'path', d: poly(a, b, c), w, c: paint, o });
-  const far: Paint = f.front ? 'body' : 'bodyFar';
-  // Far side first, so the near limbs overlap it.
-  out.push(limb(f.shoulderF, f.elbowF, f.wristF, 7, far));
-  out.push(limb(f.hipF, f.kneeF, f.ankleF, 9, far));
-  out.push({ t: 'line', a: f.ankleF, b: f.toeF, w: 6, c: far, o });
+  const arm = (s: Pt, e: Pt, wr: Pt, far: boolean) => [
+    ...capsule(s, e, 5.6, 4.3, tone(w('upperArm'), far), o),
+    ...capsule(e, wr, 4.3, 3.0, tone(w('forearm'), far), o),
+    ...ball(wr, 3.2, far ? 'f' : 'b', o),
+  ];
+  const leg = (h: Pt, k: Pt, a: Pt, toe: Pt, far: boolean) => [
+    ...capsule(h, k, 8.6, 5.6, tone(w('thigh'), far), o),
+    ...capsule(k, a, 5.6, 3.4, tone(w('shin'), far), o),
+    ...capsule(a, toe, 3.3, 2.2, far ? 'f' : 'b', o),
+  ];
+  const delt = (s: Pt, far: boolean) => ball(s, 6.6, tone(w('delt'), far), o);
 
   if (f.front) {
-    // A tapered torso, shoulders wider than hips.
-    const s = f.side;
-    const pts: Pt[] = [
-      [f.shoulder[0] + s[0] * 13, f.shoulder[1] + s[1] * 13],
-      [f.shoulder[0] - s[0] * 13, f.shoulder[1] - s[1] * 13],
-      [f.hip[0] - s[0] * 9, f.hip[1] - s[1] * 9],
-      [f.hip[0] + s[0] * 9, f.hip[1] + s[1] * 9],
-    ];
-    out.push({ t: 'path', d: `${poly(...pts)} Z`, w: 6, c: 'body', o, fill: 'body' });
-  } else {
-    // Torso: a thick line from hips to shoulders.
-    out.push({ t: 'line', a: f.hip, b: f.shoulder, w: 15, c: 'body', o });
-  }
-  out.push({ t: 'line', a: f.shoulder, b: f.neck, w: 6, c: 'skin', o });
-  out.push({ t: 'circle', c0: f.head, r: BODY.head, fill: 'skin', o });
-  if (f.front) {
-    // Two eyes facing you (or the back of the head, from above).
+    const side = f.side;
+    out.push(...leg(f.hipF, f.kneeF, f.ankleF, f.toeF, false));
+    out.push(...leg(f.hipN, f.kneeN, f.ankleN, f.toeN, false));
+    out.push(...capsule(f.hip, f.shoulder, 10.5, 13.5, tone(w('torso'), false), o));
     if (!demo.noFloor) {
-      for (const k of [-3.2, 3.2]) out.push({ t: 'circle', c0: [f.head[0] + f.side[0] * k, f.head[1] + f.side[1] * k], r: 1.6, fill: 'face', o });
+      for (const k of [-6, 6]) out.push(...ball(plus(along(f.shoulder, f.hip, 0.2), side, k), 6.2, tone(w('pec'), false), o));
     }
+    out.push(...capsule(f.shoulder, f.neck, 3.6, 3.6, 'b', o));
+    out.push(...ball(f.head, BODY.head, 'b', o));
+    if (!demo.noFloor) {
+      for (const k of [-3.2, 3.2]) out.push({ t: 'circle', c0: plus(f.head, side, k), r: 1.4, fill: 'face', o });
+    }
+    out.push(...delt(f.shoulderF, false), ...delt(f.shoulderN, false));
+    out.push(...arm(f.shoulderF, f.elbowF, f.wristF, false));
+    out.push(...arm(f.shoulderN, f.elbowN, f.wristN, false));
   } else {
-    // A small visor on the face side, so you can tell face-up from face-down.
-    const eye: Pt = [f.head[0] + f.face[0] * 5.5, f.head[1] + f.face[1] * 5.5];
-    out.push({ t: 'circle', c0: eye, r: 2.4, fill: 'face', o });
+    const front: Pt = f.face;
+    // Far side first, so the near limbs overlap it.
+    out.push(...arm(f.shoulder, f.elbowF, f.wristF, true));
+    out.push(...leg(f.hip, f.kneeF, f.ankleF, f.toeF, true));
+    out.push(...capsule(f.hip, f.shoulder, 10.4, 11.6, tone(w('torso'), false), o));
+    const bodyFront = front[0] === 0 && front[1] === 0 ? LIGHT : front;
+    const up: Pt = [(f.shoulder[0] - f.hip[0]) / BODY.torso, (f.shoulder[1] - f.hip[1]) / BODY.torso];
+    // Chest on the front of the upper torso, glutes on the back of the hips.
+    out.push(...ball(plus(along(f.shoulder, f.hip, 0.24), bodyFront, 5), 7.4, tone(w('pec'), false), o));
+    out.push(...ball(plus(plus(f.hip, bodyFront, -5.2), up, 3), 8.6, tone(w('glute'), false), o));
+    out.push(...leg(f.hip, f.kneeN, f.ankleN, f.toeN, false));
+    out.push(...capsule(f.shoulder, f.neck, 3.6, 3.6, 'b', o));
+    out.push(...ball(f.head, BODY.head, 'b', o));
+    // A small nose shows which way the face points.
+    out.push({ t: 'circle', c0: plus(f.head, front, 8.4), r: 2.1, fill: 'b1', o });
+    out.push({ t: 'circle', c0: plus(f.head, front, 4.4), r: 1.3, fill: 'face', o });
+    out.push(...delt(f.shoulder, false));
+    out.push(...arm(f.shoulder, f.elbowN, f.wristN, false));
   }
-
-  out.push(limb(f.hipN, f.kneeN, f.ankleN, 9.5, 'body'));
-  out.push({ t: 'line', a: f.ankleN, b: f.toeN, w: 6, c: 'body', o });
-  out.push(limb(f.shoulderN, f.elbowN, f.wristN, 7.5, 'body'));
-  out.push({ t: 'circle', c0: f.wristN, r: 3.6, fill: 'skin', o });
-  if (f.front) out.push({ t: 'circle', c0: f.wristF, r: 3.6, fill: 'skin', o });
 
   for (const p of demo.front ?? []) out.push(...propShapes(p, f).map((s) => ({ ...s, o })));
   return out;
 }
 
 /** Plain SVG markup for a frame, with fixed colours (tests and previews). */
-export function frameSvg(demo: Demo, f: Frame, size = 240): string {
-  const color: Record<Paint, string> = {
-    body: '#0284c7',
-    bodyFar: '#7cc4ea',
-    skin: '#f1b98f',
-    kit: '#3b4656',
-    kitSoft: '#c9d3df',
-    floor: '#dbe4ee',
-    face: '#16202a',
-  };
-  const parts = drawFrame(demo, f).map((s) => {
+export function frameSvg(demo: Demo, f: Frame, size = 240, worked: ReadonlySet<Part> = new Set()): string {
+  const color = COLORS;
+  const parts = drawFrame(demo, f, 1, worked).map((s) => {
     const op = s.o === undefined ? '' : ` opacity="${s.o}"`;
     switch (s.t) {
       case 'line':
@@ -164,6 +285,8 @@ export function frameSvg(demo: Demo, f: Frame, size = 240): string {
         return `<circle cx="${r1(s.c0[0])}" cy="${r1(s.c0[1])}" r="${s.r}" fill="${color[s.fill]}"${op}/>`;
       case 'ring':
         return `<circle cx="${r1(s.c0[0])}" cy="${r1(s.c0[1])}" r="${s.r}" fill="none" stroke="${color[s.c]}" stroke-width="${s.w}"${op}/>`;
+      case 'ellipse':
+        return `<ellipse cx="${r1(s.c0[0])}" cy="${r1(s.c0[1])}" rx="${s.rx}" ry="${s.ry}" fill="${color[s.fill]}"${op}/>`;
       case 'rect':
         return `<rect x="${r1(s.x)}" y="${r1(s.y)}" width="${s.w}" height="${s.h}" rx="${s.r}" fill="${color[s.fill]}"${op}/>`;
     }
@@ -190,7 +313,7 @@ export function demoViewBox(demo: Demo, solveAt: (ms: number) => { f: Frame; o: 
     const { f, o } = solveAt(ms);
     for (const s of drawFrame(demo, f, o)) {
       // The floor spans the whole width; size the view to the figure and kit.
-      if (s.t === 'line' && s.c === 'floor') continue;
+      if (s.t === 'ellipse' || (s.t === 'rect' && s.fill === 'floor')) continue;
       if (s.t === 'line') {
         grow(s.a[0], s.a[1], s.w / 2);
         grow(s.b[0], s.b[1], s.w / 2);
