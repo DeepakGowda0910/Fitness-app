@@ -29,6 +29,7 @@ import {
   workoutsThisWeek,
   type StoredWorkout,
 } from '@/lib/workouts';
+import { ExerciseDemo } from './exercise-demo';
 import { Notice } from './fields';
 
 const WEEKDAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -371,7 +372,8 @@ function DayCard({ day, history, onStart, isNext }: { day: ProgramDay; history: 
             <li key={p.exerciseId} className="p-5">
               <div className="flex items-start gap-3">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-sm font-semibold">{i + 1}</span>
-                <div className="min-w-0 flex-1">
+                <div className="grid min-w-0 flex-1 gap-x-5 sm:grid-cols-[minmax(0,1fr)_13rem] sm:grid-rows-[auto_1fr]">
+                  <div className="sm:col-start-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <h3 className="font-semibold">{p.name}</h3>
                     <p className="text-sm font-medium">
@@ -380,6 +382,11 @@ function DayCard({ day, history, onStart, isNext }: { day: ProgramDay; history: 
                     </p>
                   </div>
                   {e ? <p className="text-sm text-muted">{e.muscles}</p> : null}
+                  </div>
+                  <div className="mt-3 max-w-80 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:max-w-none">
+                    <ExerciseDemo exerciseId={p.exerciseId} name={p.name} />
+                  </div>
+                  <div className="sm:col-start-1">
                   {last ? (
                     <p className="mt-2 text-sm">
                       <span className="text-muted">Last time ({fmtDate(last.date)}):</span> {lastText(last.sets, p.unit)}
@@ -396,6 +403,7 @@ function DayCard({ day, history, onStart, isNext }: { day: ProgramDay; history: 
                       </ul>
                     </details>
                   ) : null}
+                  </div>
                 </div>
               </div>
             </li>
@@ -656,6 +664,7 @@ function Logger({
                 {last ? `Last: ${lastText(last.sets, p.unit)}. ` : ''}
                 {s.note}
               </p>
+              <DemoToggle exerciseId={p.exerciseId} name={p.name} />
               <div className={`mt-3 grid items-center gap-2 text-xs font-medium text-muted ${weighted ? 'grid-cols-[2.5rem_1fr_1fr_3rem]' : 'grid-cols-[2.5rem_1fr_3rem]'}`}>
                 <span>Set</span>
                 {weighted ? <span>kg</span> : null}
@@ -790,5 +799,20 @@ function Logger({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** A demo you can open mid-workout; it only loads once opened. */
+function DemoToggle({ exerciseId, name }: { exerciseId: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className="mt-2 text-sm" onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary className="cursor-pointer text-brand">Watch how to do it</summary>
+      {open ? (
+        <div className="mt-2">
+          <ExerciseDemo exerciseId={exerciseId} name={name} compact />
+        </div>
+      ) : null}
+    </details>
   );
 }
