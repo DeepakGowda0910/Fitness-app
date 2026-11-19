@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { AccountButton, SyncNotice } from '@/components/account';
+import { MainNav } from '@/components/main-nav';
 import { AppDataProvider } from '@/lib/app-data';
 import './globals.css';
 
@@ -35,27 +36,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </span>
               <span className="hidden sm:inline">Hyper Active</span>
             </Link>
-            <nav className="flex items-center gap-0 text-sm font-semibold sm:gap-1">
-              <Link href="/assessment" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
-                <span className="sm:hidden">Start</span>
-                <span className="hidden sm:inline">Assessment</span>
-              </Link>
-              <Link href="/results" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
-                Targets
-              </Link>
-              <Link href="/plan" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
-                <span className="sm:hidden">Plan</span>
-                <span className="hidden sm:inline">Diet plan</span>
-              </Link>
-              <Link href="/workouts" className="rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
-                <span className="sm:hidden">Train</span>
-                <span className="hidden sm:inline">Workouts</span>
-              </Link>
-              <Link href="/checkin" className="whitespace-nowrap rounded-lg px-1.5 py-2 text-muted hover:bg-surface-2 hover:text-text sm:px-3">
-                Check-in
-              </Link>
+            <MainNav>
               <AccountButton />
-            </nav>
+            </MainNav>
           </div>
         </header>
         <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 lg:px-8 lg:pb-16 lg:pt-10">

@@ -225,5 +225,40 @@ h1 {
 .tint-3 .tint-label { color: var(--l3); font-weight: 800; }
 .tint-4 .tint-label { color: var(--l4); font-weight: 800; }
 
+/* Header tabs: the tab for the current page is filled with the soft brand blue, in the brand colour, with a gradient bar under it. */
+.nav-tab {
+  color: var(--muted);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.nav-tab:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.nav-tab::after {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.15rem;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--grad);
+  transform: scaleX(0);
+  transition: transform 0.22s ease;
+}
+.nav-tab[aria-current='page'] {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+.nav-tab[aria-current='page']::after {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-tab,
+  .nav-tab::after {
+    transition: none;
+  }
+}
+
 /* While a recipe is open, meal cards keep their own height instead of stretching to the open one. */
 .meal-grid:has(details[open]) > section { align-self: start; }
