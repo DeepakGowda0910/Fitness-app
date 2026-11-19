@@ -9,6 +9,7 @@ import { DIET_TYPES, labelOf } from '@/lib/labels';
 import { DEFAULT_PLAN_SETTINGS, localToday, nutrientRows, planRequestOf, slotLabel, type PlanSettings } from '@/lib/plan';
 import { useTargets } from '@/lib/targets';
 import { Notice } from './fields';
+import { MealRecipe } from './meal-recipe';
 import { NoTargets } from './results-view';
 
 const SETTINGS_KEY = 'fitness.plan.v1';
@@ -144,12 +145,13 @@ function Plan({ targets, adjusted, draft }: { targets: DayTargets; adjusted: boo
       <DayTabs days={plan.days} active={day.dayIndex} onSelect={setDayIndex} />
 
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-6">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="meal-grid grid gap-4 md:grid-cols-2">
           {day.meals.map((meal, i) => (
             <MealCard
               tone={((i % 4) + 1) as 1 | 2 | 3 | 4}
               key={`${day.dayIndex}-${meal.slot}`}
               meal={meal}
+              dietType={draft.dietType}
               onSwap={() => update({ ...settings, excludeDishIds: [...settings.excludeDishIds, meal.dishId] })}
             />
           ))}
@@ -201,7 +203,17 @@ function DayTabs({ days, active, onSelect }: { days: PlannedDay[]; active: numbe
   );
 }
 
-function MealCard({ meal, tone, onSwap }: { meal: PlannedMeal; tone: 1 | 2 | 3 | 4; onSwap: () => void }) {
+function MealCard({
+  meal,
+  tone,
+  dietType,
+  onSwap,
+}: {
+  meal: PlannedMeal;
+  tone: 1 | 2 | 3 | 4;
+  dietType: AssessmentDraft['dietType'];
+  onSwap: () => void;
+}) {
   return (
     <section className={`tint tint-${tone} flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm`}>
       <div className="flex items-start justify-between gap-3">
@@ -225,6 +237,7 @@ function MealCard({ meal, tone, onSwap }: { meal: PlannedMeal; tone: 1 | 2 | 3 |
           </li>
         ))}
       </ul>
+      <MealRecipe meal={meal} dietType={dietType} />
       <button
         type="button"
         onClick={onSwap}

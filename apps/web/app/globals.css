@@ -224,3 +224,6 @@ h1 {
 .tint-2 .tint-label { color: var(--l2); font-weight: 800; }
 .tint-3 .tint-label { color: var(--l3); font-weight: 800; }
 .tint-4 .tint-label { color: var(--l4); font-weight: 800; }
+
+/* While a recipe is open, meal cards keep their own height instead of stretching to the open one. */
+.meal-grid:has(details[open]) > section { align-self: start; }
