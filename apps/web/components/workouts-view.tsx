@@ -700,11 +700,17 @@ function Logger({
                         setRow(p.exerciseId, i, { done, reps: done && r.reps === '' ? String(s.targetReps) : r.reps });
                         if (done && p.restSec > 0) setRest({ until: Date.now() + p.restSec * 1000, total: p.restSec });
                       }}
-                      className={`grid h-11 w-12 place-items-center rounded-lg border text-lg font-bold ${
-                        r.done ? 'border-brand bg-brand text-on-brand' : 'border-border bg-surface text-muted hover:border-muted'
-                      }`}
+                      className="group grid h-11 w-12 place-items-center rounded-lg"
                     >
-                      ✓
+                      {/* A real tick box: empty until the set is done, then filled with a tick. */}
+                      <span
+                        aria-hidden
+                        className={`grid size-7 place-items-center rounded-md border-2 text-base font-bold leading-none ${
+                          r.done ? 'border-brand bg-brand text-on-brand' : 'border-muted bg-surface text-transparent group-hover:border-brand'
+                        }`}
+                      >
+                        ✓
+                      </span>
                     </button>
                   </div>
                 ))}
