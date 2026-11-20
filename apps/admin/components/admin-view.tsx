@@ -18,6 +18,7 @@ import {
   type UserStatus,
 } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
+import { ClientInputsView } from './client-inputs-view';
 import { Notice } from './ui';
 
 const dateFmt = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -45,6 +46,8 @@ function Dashboard({ role, me }: { role: AdminRole; me: string }) {
   const [status, setStatus] = useState<'all' | UserStatus>('all');
   const [pending, setPending] = useState<Pending | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const viewing = users?.find((u) => u.id === viewingId) ?? null;
   const open = users?.find((u) => u.id === openId) ?? null;
   const [done, setDone] = useState<string | null>(null);
 
@@ -83,14 +86,26 @@ function Dashboard({ role, me }: { role: AdminRole; me: string }) {
     await reload();
   };
 
+  if (viewing) {
+    return (
+      <ClientInputsView
+        user={viewing}
+        onBack={() => {
+          setViewingId(null);
+          void reload();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
         <p className="text-sm font-medium text-brand">{role === 'super_admin' ? 'Super admin' : 'Admin'}</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">Users</h1>
         <p className="mt-2 max-w-prose text-muted">
-          Accounts, sign-up progress and access. Health answers, weights and check-in details stay private to each user. Every action here is
-          recorded below.
+          Accounts, sign-up progress and access. Open a user to see everything they entered: check-ins, workouts, weigh-ins and answers.
+          Every look and every action is recorded below.
         </p>
       </div>
 
@@ -237,6 +252,10 @@ function Dashboard({ role, me }: { role: AdminRole; me: string }) {
           me={me}
           onClose={() => setOpenId(null)}
           onPick={(kind) => setPending({ kind, user: open })}
+          onViewInputs={() => {
+            setOpenId(null);
+            setViewingId(open.id);
+          }}
         />
       ) : null}
       {pending ? <ConfirmDialog pending={pending} onCancel={() => setPending(null)} onDone={onDone} /> : null}
@@ -259,12 +278,14 @@ function UserPanel({
   me,
   onClose,
   onPick,
+  onViewInputs,
 }: {
   user: AdminUser;
   role: AdminRole;
   me: string;
   onClose: () => void;
   onPick: (kind: ActionKind) => void;
+  onViewInputs: () => void;
 }) {
   const { actions, note } = allowedActions(user, role, me);
   const isMe = user.email.toLowerCase() === me.toLowerCase();
@@ -305,6 +326,15 @@ function UserPanel({
           <Fact label="Last sign-in" value={day(user.last_sign_in_at)} />
         </dl>
 
+        <button
+          type="button"
+          onClick={onViewInputs}
+          className="mt-5 flex w-full flex-col items-start rounded-xl bg-brand px-4 py-3 text-left text-on-brand hover:bg-brand-strong"
+        >
+          <span className="font-semibold">See everything they entered</span>
+          <span className="text-sm opacity-90">Weekly check-ins, workouts with sets and kg, weigh-ins and assessment answers</span>
+        </button>
+
         <h3 className="mt-6 font-semibold">Actions</h3>
         {actions.length > 0 ? (
           <ul className="mt-2 space-y-2">
@@ -332,7 +362,7 @@ function UserPanel({
             <Notice>{note}</Notice>
           </div>
         ) : null}
-        <p className="mt-4 text-xs text-muted">Names, weights, health answers and check-in details stay private and aren&apos;t shown here.</p>
+        <p className="mt-4 text-xs text-muted">Opening their entries is recorded in the admin activity log.</p>
       </div>
     </div>
   );

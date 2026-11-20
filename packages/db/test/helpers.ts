@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
@@ -23,4 +24,14 @@ export async function pgErrorCode(p: Promise<unknown>): Promise<string | undefin
     return err.cause?.code ?? err.code;
   }
   return undefined;
+}
+
+/** The SQL of every supabase/update-N-*.sql with N above `after`, in order: what a project applies after that update. */
+export function updatesAfter(after: number): string[] {
+  const dir = new URL('../supabase/', import.meta.url);
+  return readdirSync(dir)
+    .map((f) => ({ f, n: Number(/^update-(\d+)-/.exec(f)?.[1]) }))
+    .filter(({ n }) => Number.isFinite(n) && n > after)
+    .sort((a, b) => a.n - b.n)
+    .map(({ f }) => readFileSync(new URL(f, dir), 'utf8'));
 }

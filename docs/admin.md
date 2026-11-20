@@ -16,9 +16,12 @@ link to it.
   function that checks the role again and writes `audit_logs`
   (`packages/db/migrations/0006_admin_access.sql`, `docs/database.md`). There
   is no secret key in the site; it uses the same public key as the app.
-- **What admins see:** email, status, role, joined, last sign-in, onboarding
-  stage, check-in count. No names, weights, health answers or check-in
-  details.
+- **What admins see:** the user list (email, status, role, joined, last
+  sign-in, onboarding stage, check-in count), and, from a user's Manage panel,
+  "See everything they entered": weekly check-ins, workouts with every set,
+  weigh-ins and all assessment answers, health answers included. Read-only,
+  and every look is audited. Clients are told in the app that their coach
+  can see what they save (decided by Deepakk, 2026-11-20).
 
 ## Managing a user
 
@@ -38,7 +41,8 @@ says why when something isn't allowed:
 1. Run `packages/db/supabase/update-1-admin.sql` in the Supabase SQL editor
    (once), then `select public.grant_admin_role('<email>', 'super_admin');`.
    Projects set up before roles could be managed here also run
-   `update-3-admin-roles.sql` once.
+   `update-3-admin-roles.sql` once, and `update-4-admin-client-inputs.sql`
+   for the client entries view.
 2. Supabase → Authentication → URL Configuration → Redirect URLs: add
    `<site>/admin/`. Without it, admin sign-in links land on the app instead.
 

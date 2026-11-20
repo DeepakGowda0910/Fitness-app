@@ -71,6 +71,13 @@
       "when": 1795024109870,
       "tag": "0009_admin_manage_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795152874409,
+      "tag": "0010_admin_user_inputs",
+      "breakpoints": true
     }
   ]
 }
