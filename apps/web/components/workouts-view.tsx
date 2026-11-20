@@ -372,8 +372,8 @@ function DayCard({ day, history, onStart, isNext }: { day: ProgramDay; history: 
             <li key={p.exerciseId} className="p-5">
               <div className="flex items-start gap-3">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-sm font-semibold">{i + 1}</span>
-                <div className="grid min-w-0 flex-1 gap-x-5 sm:grid-cols-[minmax(0,1fr)_13rem] sm:grid-rows-[auto_1fr]">
-                  <div className="sm:col-start-1">
+                <div className="min-w-0 flex-1">
+                  <div>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <h3 className="font-semibold">{p.name}</h3>
                     <p className="text-sm font-medium">
@@ -383,26 +383,14 @@ function DayCard({ day, history, onStart, isNext }: { day: ProgramDay; history: 
                   </div>
                   {e ? <p className="text-sm text-muted">{e.muscles}</p> : null}
                   </div>
-                  <div className="mt-3 max-w-80 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:max-w-none">
-                    <ExerciseDemo exerciseId={p.exerciseId} name={p.name} />
-                  </div>
-                  <div className="sm:col-start-1">
+                  <div>
                   {last ? (
                     <p className="mt-2 text-sm">
                       <span className="text-muted">Last time ({fmtDate(last.date)}):</span> {lastText(last.sets, p.unit)}
                     </p>
                   ) : null}
                   <p className={`mt-1 text-sm ${s.kind === 'increase' ? 'font-medium text-brand' : 'text-muted'}`}>{s.note}</p>
-                  {e ? (
-                    <details className="mt-2 text-sm">
-                      <summary className="cursor-pointer text-brand">How to do it</summary>
-                      <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
-                        {e.cues.map((c) => (
-                          <li key={c}>{c}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : null}
+                  <HowToDoIt exerciseId={p.exerciseId} name={p.name} />
                   </div>
                 </div>
               </div>
@@ -664,7 +652,7 @@ function Logger({
                 {last ? `Last: ${lastText(last.sets, p.unit)}. ` : ''}
                 {s.note}
               </p>
-              <DemoToggle exerciseId={p.exerciseId} name={p.name} />
+              <HowToDoIt exerciseId={p.exerciseId} name={p.name} />
               <div className={`mt-3 grid items-center gap-2 text-xs font-medium text-muted ${weighted ? 'grid-cols-[2.5rem_1fr_1fr_3rem]' : 'grid-cols-[2.5rem_1fr_3rem]'}`}>
                 <span>Set</span>
                 {weighted ? <span>kg</span> : null}
@@ -803,14 +791,26 @@ function Logger({
 }
 
 /** A demo you can open mid-workout; it only loads once opened. */
-function DemoToggle({ exerciseId, name }: { exerciseId: string; name: string }) {
+/**
+ * "How to do it": the demonstration clip next to the written steps. Closed by
+ * default; the clip is only created (and downloaded) once it is opened.
+ */
+function HowToDoIt({ exerciseId, name }: { exerciseId: string; name: string }) {
   const [open, setOpen] = useState(false);
+  const cues = exerciseById(exerciseId)?.cues ?? [];
   return (
     <details className="mt-2 text-sm" onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
-      <summary className="cursor-pointer text-brand">Watch how to do it</summary>
+      <summary className="cursor-pointer text-brand">How to do it</summary>
       {open ? (
-        <div className="mt-2">
-          <ExerciseDemo exerciseId={exerciseId} name={name} compact />
+        <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] sm:items-start">
+          <ExerciseDemo exerciseId={exerciseId} name={name} />
+          {cues.length > 0 ? (
+            <ul className="list-disc space-y-1 pl-5 text-muted">
+              {cues.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
     </details>
