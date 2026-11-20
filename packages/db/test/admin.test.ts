@@ -10,9 +10,9 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { migrationsFolder, schema, SUPABASE_TEST_SHIM_SQL, withUser } from '../src/index.js';
-import { freshDb, pgErrorCode, type Db } from './helpers.js';
+import { freshDb, pgErrorCode, updatesAfter, type Db } from './helpers.js';
 
-const { users, adminRoles, auditLogs, assessments, bodyMeasurements, weeklyCheckins } = schema;
+const { users, adminRoles, auditLogs, assessments, assessmentAnswers, bodyMeasurements, weeklyCheckins, workoutSessions } = schema;
 
 const OWNER = '11111111-1111-4111-8111-111111111111';
 const HELPER = '22222222-2222-4222-8222-222222222222';
@@ -164,6 +164,52 @@ describe('admin area', () => {
     expect(await pgErrorCode(as(OWNER, sql`select public.admin_set_role(${clientId}, 'admin')`))).toBe('P0002');
   });
 
+  it("shows an admin everything a client entered, and logs each look", async () => {
+    const [a] = await db.select().from(assessments).where(sql`user_id = ${clientId}`);
+    await db.insert(assessmentAnswers).values([
+      { assessmentId: a!.id, section: 'body', questionKey: 'weightKg', value: 72 },
+      { assessmentId: a!.id, section: 'health', questionKey: 'conditions', value: ['thyroid'] },
+    ]);
+    await db.insert(bodyMeasurements).values({ userId: clientId, measuredAt: new Date('2026-11-15T12:00:00Z'), type: 'weight', value: 71.4, unit: 'kg', source: 'measured_manual' });
+    await db.insert(weeklyCheckins).values({
+      userId: clientId, weekNo: 1, weekEnd: '2026-11-15', dueAt: new Date(), submittedAt: new Date(),
+      dietAdherencePct: 85, daysLogged: 6, hunger: 2, energy: 4, sleepQuality: 3,
+    });
+    await db.insert(workoutSessions).values({
+      id: '55555555-5555-4555-8555-555555555555', userId: clientId, performedOn: '2026-11-16', dayKey: 'push', dayName: 'Push',
+      plannerVersion: 't', durationMin: 50, effort: 4, completedAt: new Date(),
+      exercises: [{ exerciseId: 'bench', name: 'Bench press', sets: [{ weightKg: 40, reps: 10 }] }],
+    });
+
+    const r = rows(await as(HELPER, sql`select public.admin_user_inputs(${clientId}) as d`))[0]!.d as Record<string, any>;
+    expect(r.assessment.status).toBe('completed');
+    expect(r.assessment.answers).toEqual({ weightKg: 72, conditions: ['thyroid'] });
+    expect(r.weigh_ins).toHaveLength(1);
+    expect(Number(r.weigh_ins[0].value)).toBe(71.4);
+    expect(r.checkins[0]).toMatchObject({ week_end: '2026-11-15', diet_adherence_pct: 85, days_logged: 6, hunger: 2 });
+    expect(r.workouts[0]).toMatchObject({ day_name: 'Push', effort: 4, exercises: [{ name: 'Bench press', sets: [{ weightKg: 40, reps: 10 }] }] });
+
+    const log = await db.select().from(auditLogs).where(sql`action = 'admin.view_user_inputs'`);
+    expect(log).toHaveLength(1);
+    expect(log[0]).toMatchObject({ actorId: helperId, subjectUserId: clientId });
+    // The client can see that an admin looked at their data.
+    expect((await withUser(db, CLIENT, (tx) => tx.select().from(auditLogs))).some((l) => l.action === 'admin.view_user_inputs')).toBe(true);
+  });
+
+  it("refuses a client's inputs to non-admins and signed-out visitors", async () => {
+    expect(await pgErrorCode(as(CLIENT, sql`select public.admin_user_inputs(${ownerId})`))).toBe('42501');
+    const anon = db.transaction(async (tx) => {
+      await tx.execute(sql`set local role anon`);
+      return tx.execute(sql`select public.admin_user_inputs(${clientId})`);
+    });
+    expect(await pgErrorCode(anon)).toBe('42501');
+  });
+
+  it('returns empty lists for a client who has entered nothing yet', async () => {
+    const r = rows(await as(OWNER, sql`select public.admin_user_inputs(${helperId}) as d`))[0]!.d as Record<string, unknown>;
+    expect(r).toEqual({ assessment: null, weigh_ins: [], checkins: [], workouts: [] });
+  });
+
   it('new users always start active, whatever they send', async () => {
     const NEW = '44444444-4444-4444-8444-444444444444';
     const [u] = await withUser(db, NEW, (tx) => tx.insert(users).values({ authProviderId: NEW, email: 'n@example.com', status: 'suspended' }).returning());
@@ -182,9 +228,7 @@ describe('supabase/update-1-admin.sql', () => {
     await client.exec(before);
     await client.exec(update);
     // Later updates, in order, so Drizzle has nothing newer to apply.
-    for (const later of ['update-2-workouts.sql', 'update-3-admin-roles.sql']) {
-      await client.exec(readFileSync(new URL(`../supabase/${later}`, import.meta.url), 'utf8'));
-    }
+    for (const later of updatesAfter(1)) await client.exec(later);
     const count = async () => (await client.query<{ n: number }>('select count(*)::int as n from drizzle.__drizzle_migrations')).rows[0]!.n;
     const n = await count();
     await migrate(drizzle(client), { migrationsFolder });

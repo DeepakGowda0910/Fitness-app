@@ -56,7 +56,7 @@ export const STEPS = [
   { id: 'body', title: 'About you', blurb: 'Used to estimate how much energy your body uses.' },
   { id: 'activity', title: 'Activity', blurb: 'Daily movement and training change your needs the most.' },
   { id: 'goal', title: 'Goal', blurb: 'What you want to work towards.' },
-  { id: 'health', title: 'Health check', blurb: 'Keeps your targets safe. Stays on this device.' },
+  { id: 'health', title: 'Health check', blurb: 'Keeps your targets safe. When you sign in, these answers are saved to your account, where your coach can see them.' },
   { id: 'food', title: 'Food', blurb: 'For your diet plan.' },
   { id: 'review', title: 'Review', blurb: 'Check your answers before we calculate.' },
 ] as const;

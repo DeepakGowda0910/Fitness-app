@@ -23,6 +23,7 @@ const UPDATES = {
   'update-1-admin.sql': ['0005_admin_roles', '0006_admin_access'],
   'update-2-workouts.sql': ['0007_workouts', '0008_workouts_rls'],
   'update-3-admin-roles.sql': ['0009_admin_manage_roles'],
+  'update-4-admin-client-inputs.sql': ['0010_admin_user_inputs'],
 };
 
 function migrationSql(entry) {

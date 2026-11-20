@@ -84,6 +84,7 @@ export function SignInView() {
         <p className="text-muted">
           Signed in as <span className="font-medium text-text">{email}</span>. Your answers, weigh-ins and check-ins {saving}
         </p>
+        <p className="mt-2 text-sm text-muted">Your coach can see what you save (answers, check-ins, weigh-ins and workouts) so they can help you.</p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Link href="/results" className="inline-flex h-12 items-center justify-center rounded-xl bg-brand px-6 font-semibold text-on-brand hover:bg-brand-strong">
             My targets
@@ -349,6 +350,9 @@ export function SignedOutForm({ linkError, initialMode = 'signin', gated = false
         </p>
       )}
       <p className={`${gated ? 'mt-5' : 'mt-2'} text-xs text-muted`}>
+        Your coach can see what you save to your account (answers, check-ins, weigh-ins and workouts) so they can help you.
+      </p>
+      <p className="mt-2 text-xs text-muted">
         Signed in on your phone already? Each browser signs in on its own, so sign in here too to see the same data on this device.
       </p>
     </Card>

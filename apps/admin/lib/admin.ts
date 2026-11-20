@@ -41,6 +41,7 @@ const ACTION_LABEL: Record<string, string> = {
   'admin.suspend_user': 'Suspended',
   'admin.reactivate_user': 'Reactivated',
   'admin.delete_user': 'Deleted',
+  'admin.view_user_inputs': 'Viewed the entries of',
   'admin.revoke_role': 'Removed admin role from',
   'admin.grant_role:admin': 'Made admin:',
   'admin.grant_role:super_admin': 'Made super admin:',

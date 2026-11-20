@@ -6,7 +6,7 @@ import { drizzle } from 'drizzle-orm/pglite';
 import { migrate } from 'drizzle-orm/pglite/migrator';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { migrationsFolder, schema, SUPABASE_TEST_SHIM_SQL, withUser } from '../src/index.js';
-import { freshDb, pgErrorCode, type Db } from './helpers.js';
+import { freshDb, pgErrorCode, updatesAfter, type Db } from './helpers.js';
 
 const { users, workoutSessions } = schema;
 const ALICE = '11111111-1111-4111-8111-111111111111';
@@ -63,7 +63,7 @@ describe('supabase/update-2-workouts.sql', () => {
     await client.exec(before);
     await client.exec(update);
     // Later updates, in order, so Drizzle has nothing newer to apply.
-    await client.exec(readFileSync(new URL('../supabase/update-3-admin-roles.sql', import.meta.url), 'utf8'));
+    for (const later of updatesAfter(2)) await client.exec(later);
     const count = async () => (await client.query<{ n: number }>('select count(*)::int as n from drizzle.__drizzle_migrations')).rows[0]!.n;
     const n = await count();
     await migrate(drizzle(client), { migrationsFolder });
