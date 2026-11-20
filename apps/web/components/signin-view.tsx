@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { cloudEnabled, useAppData } from '@/lib/app-data';
 import { takeReturnPath } from '@/lib/return-path';
 import { friendlyAuthError, googleSignInEnabled, signInRedirectUrl, supabase } from '@/lib/supabase';
+import { AdminLink } from './admin-link';
 import { Notice } from './fields';
 
 /** Set just before leaving for Google, so a failed return can be explained as a Google problem. */
@@ -93,6 +94,7 @@ export function SignInView() {
             Sign out
           </button>
         </div>
+        <AdminLink email={email} />
         <div className="mt-6 border-t border-border pt-5">
           {changingPassword ? (
             <>
