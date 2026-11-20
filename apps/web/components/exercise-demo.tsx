@@ -71,7 +71,7 @@ export function ExerciseDemo({ exerciseId, name, compact = false }: { exerciseId
           <video
             ref={videoRef}
             className="block h-full w-full object-contain"
-            poster={clip.poster}
+            poster={near ? clip.poster : undefined}
             muted
             loop
             playsInline
